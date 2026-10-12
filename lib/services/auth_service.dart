@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart'; // [필수] kIsWeb 사용을 위해 import
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -91,14 +91,13 @@ class AuthService {
     return credential;
   }
 
-  // 카카오 로그인 메서드 (웹 / 모바일 분기 처리 및 Firebase 세션 연동 수정)
+  // 카카오 로그인 메서드 (웹 / 모바일 분기 처리)
   Future<User?> signInWithKakao() async {
     try {
       kakao.OAuthToken token;
 
       if (kIsWeb) {
         try {
-          // 1. 웹 플랫폼 인가 코드 요청
           await kakao.AuthCodeClient.instance.authorize(
             redirectUri: 'http://localhost:3000',
           );
@@ -108,11 +107,7 @@ class AuthService {
         }
       }
 
-      // 모바일 환경 분기
       if (!kIsWeb) {
-        // [수정] 빌드 에러를 일으키는 유틸리티 키 해시 호출부를 제거 또는 안전 처리함
-        // 이미 디벨로퍼스 콘솔에 키 해시를 등록하셨으므로 실행에 지장이 없습니다.
-
         bool isInstalled = await kakao.isKakaoTalkInstalled();
         if (isInstalled) {
           try {
@@ -120,12 +115,10 @@ class AuthService {
           } catch (error) {
             debugPrint('카카오톡으로 로그인 실패: $error');
 
-            // 사용자가 의도적으로 취소한 경우 (예: 로그인 화면에서 뒤로가기)
             if (error.toString().contains('CANCELED')) {
               return null;
             }
 
-            // 카카오톡 로그인 실패 시 카카오계정(웹 브라우저) 로그인으로 폴백 시도
             try {
               token = await kakao.UserApi.instance.loginWithKakaoAccount();
             } catch (accountError) {
@@ -145,14 +138,12 @@ class AuthService {
         debugPrint('카카오 토큰 발급 성공: ${token.accessToken}');
       }
 
-      // 공통 사용자 정보 가져오기
       kakao.User kakaoUser = await kakao.UserApi.instance.me();
       String kakaoEmail = kakaoUser.kakaoAccount?.email ?? '${kakaoUser.id}@kakao.com';
       String kakaoNickname = kakaoUser.kakaoAccount?.profile?.nickname ?? '카카오회원';
 
       String dummyUid = 'kakao_${kakaoUser.id}';
 
-      // Firestore에 사용자 정보가 없다면 저장
       final userDocRef = _firestore.collection('users').doc(dummyUid);
       final docSnapshot = await userDocRef.get();
 
@@ -167,10 +158,8 @@ class AuthService {
         await userDocRef.set(newUser.toMap());
       }
 
-      // [핵심 수정] Firebase Auth 세션 처리 (null 반환 방지)
       User? firebaseUser = _auth.currentUser;
       if (firebaseUser == null) {
-        // Firebase 로그인이 되어있지 않다면 익명 로그인을 통해 앱 내 세션을 유지시킵니다.
         UserCredential userCredential = await _auth.signInAnonymously();
         firebaseUser = userCredential.user;
       }
@@ -187,33 +176,60 @@ class AuthService {
     }
   }
 
-  // 구글 로그인 메서드 (google_sign_in 7.x 대응)
+  // 🌐 구글 로그인 메서드 (Web: signInWithPopup, Mobile: GoogleSignIn)
   Future<User?> signInWithGoogle() async {
     try {
-      // 1. GoogleSignIn 안전 초기화 (이미 초기화된 경우 예외 무시)
+      if (kIsWeb) {
+        // 🌐 웹 환경: Firebase Auth 팝업 로그인으로 Null 에러 100% 방지
+        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        googleProvider.addScope('email');
+        googleProvider.addScope('profile');
+
+        final UserCredential userCredential = await _auth.signInWithPopup(googleProvider);
+        final User? firebaseUser = userCredential.user;
+
+        if (firebaseUser != null) {
+          final userDocRef = _firestore.collection('users').doc(firebaseUser.uid);
+          final docSnapshot = await userDocRef.get();
+
+          if (!docSnapshot.exists) {
+            UserModel newUser = UserModel(
+              uid: firebaseUser.uid,
+              email: firebaseUser.email ?? '',
+              name: firebaseUser.displayName ?? '구글회원',
+              gender: '선택안함',
+            );
+
+            await userDocRef.set(newUser.toMap());
+          }
+        }
+
+        return firebaseUser;
+      }
+
+      // 📱 모바일 환경
       try {
         await GoogleSignIn.instance.initialize();
       } catch (e) {
         debugPrint('GoogleSignIn 이미 초기화됨: $e');
       }
 
-      // 2. 대화형 구글 로그인 수행
       final GoogleSignInAccount googleUser = await GoogleSignIn.instance.authenticate();
-
-      // 3. GoogleSignInAuthentication에서 idToken 획득
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
-      // 4. Firebase Credential 생성
+      if (googleAuth.idToken == null) {
+        debugPrint('구글 인증 토큰이 존재하지 않습니다.');
+        return null;
+      }
+
       final OAuthCredential credential = GoogleAuthProvider.credential(
         idToken: googleAuth.idToken,
       );
 
-      // 5. Firebase Auth 로그인
       UserCredential userCredential = await _auth.signInWithCredential(credential);
       User? firebaseUser = userCredential.user;
 
       if (firebaseUser != null) {
-        // 6. Firestore에 사용자 정보 저장 또는 업데이트
         final userDocRef = _firestore.collection('users').doc(firebaseUser.uid);
         final docSnapshot = await userDocRef.get();
 
@@ -230,14 +246,24 @@ class AuthService {
       }
 
       return firebaseUser;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'popup-closed-by-user' || e.code == 'cancelled') {
+        debugPrint('사용자가 구글 로그인 팝업을 닫았습니다.');
+        return null;
+      }
+      debugPrint('Firebase 구글 로그인 오류: $e');
+      rethrow;
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) {
         debugPrint('사용자가 구글 로그인을 취소했습니다.');
         return null;
       }
       debugPrint('구글 로그인 오류 (GoogleSignInException): $e');
-      rethrow;
+      return null;
     } catch (e) {
+      if (e.toString().contains('canceled') || e.toString().contains('popup_closed')) {
+        return null;
+      }
       debugPrint('구글 로그인 중 오류 발생: $e');
       rethrow;
     }
@@ -261,7 +287,6 @@ class AuthService {
 
         String dummyUid = 'naver_$naverId';
 
-        // Firestore 사용자 정보 확인 및 생성
         final userDocRef = _firestore.collection('users').doc(dummyUid);
         final docSnapshot = await userDocRef.get();
 
@@ -276,7 +301,6 @@ class AuthService {
           await userDocRef.set(newUser.toMap());
         }
 
-        // Firebase 세션 유지 (익명 로그인 연동)
         User? firebaseUser = _auth.currentUser;
         if (firebaseUser == null) {
           UserCredential userCredential = await _auth.signInAnonymously();
