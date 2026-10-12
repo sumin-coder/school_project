@@ -195,7 +195,9 @@ class AuthService {
           if (!docSnapshot.exists) {
             UserModel newUser = UserModel(
               uid: firebaseUser.uid,
-              email: firebaseUser.email ?? '',
+              email: (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
+                  ? firebaseUser.email!
+                  : '${firebaseUser.uid}@google.com',
               name: firebaseUser.displayName ?? '구글회원',
               gender: '선택안함',
             );
@@ -214,7 +216,12 @@ class AuthService {
         debugPrint('GoogleSignIn 이미 초기화됨: $e');
       }
 
-      final GoogleSignInAccount googleUser = await GoogleSignIn.instance.authenticate();
+      final GoogleSignInAccount? googleUser = await GoogleSignIn.instance.authenticate();
+      if (googleUser == null) {
+        debugPrint('사용자가 구글 로그인을 취소했습니다.');
+        return null;
+      }
+
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
       if (googleAuth.idToken == null) {
@@ -236,7 +243,9 @@ class AuthService {
         if (!docSnapshot.exists) {
           UserModel newUser = UserModel(
             uid: firebaseUser.uid,
-            email: firebaseUser.email ?? '',
+            email: (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
+                ? firebaseUser.email!
+                : '${firebaseUser.uid}@google.com',
             name: firebaseUser.displayName ?? '구글회원',
             gender: '선택안함',
           );
@@ -247,12 +256,12 @@ class AuthService {
 
       return firebaseUser;
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'popup-closed-by-user' || e.code == 'cancelled') {
+      if (e.code == 'popup-closed-by-user' || e.code == 'cancelled' || e.code == 'user-cancelled') {
         debugPrint('사용자가 구글 로그인 팝업을 닫았습니다.');
         return null;
       }
       debugPrint('Firebase 구글 로그인 오류: $e');
-      rethrow;
+      return null;
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) {
         debugPrint('사용자가 구글 로그인을 취소했습니다.');
@@ -261,11 +270,12 @@ class AuthService {
       debugPrint('구글 로그인 오류 (GoogleSignInException): $e');
       return null;
     } catch (e) {
-      if (e.toString().contains('canceled') || e.toString().contains('popup_closed')) {
+      if (e.toString().contains('null value') || e.toString().contains('canceled') || e.toString().contains('popup_closed')) {
+        debugPrint('구글 로그인 취소 또는 null 처리: $e');
         return null;
       }
       debugPrint('구글 로그인 중 오류 발생: $e');
-      rethrow;
+      return null;
     }
   }
 
