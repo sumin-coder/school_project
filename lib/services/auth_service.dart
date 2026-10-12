@@ -190,8 +190,12 @@ class AuthService {
   // 구글 로그인 메서드 (google_sign_in 7.x 대응)
   Future<User?> signInWithGoogle() async {
     try {
-      // 1. GoogleSignIn 초기화
-      await GoogleSignIn.instance.initialize();
+      // 1. GoogleSignIn 안전 초기화 (이미 초기화된 경우 예외 무시)
+      try {
+        await GoogleSignIn.instance.initialize();
+      } catch (e) {
+        debugPrint('GoogleSignIn 이미 초기화됨: $e');
+      }
 
       // 2. 대화형 구글 로그인 수행
       final GoogleSignInAccount googleUser = await GoogleSignIn.instance.authenticate();
