@@ -128,11 +128,15 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
+        String msg = '구글 로그인 오류: $e';
+        if (e.toString().contains('unauthorized-domain')) {
+          msg = 'Firebase 콘솔 설정 필요: Authentication > Settings > 승인된 도메인에 sumin-coder.github.io 등록이 필요합니다.';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('구글 로그인 오류: $e'),
+            content: Text(msg),
             backgroundColor: Colors.redAccent,
-            duration: const Duration(seconds: 4),
+            duration: const Duration(seconds: 6),
           ),
         );
       }
