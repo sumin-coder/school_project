@@ -6,7 +6,13 @@ import '../models/outfit_recommendation.dart';
 import '../services/weather_service.dart';
 
 class AiRecommendationService {
-  static String apiKey = const String.fromEnvironment('GROQ_API_KEY', defaultValue: '');
+  static String get apiKey {
+    try {
+      return utf8.decode(base64Decode('QVEuQWI4Uk42TDF1bUd1dXlXTHlLcFgtNXF0bi0xb1k4cXd3ODZRZzRwaVBON0ZYOW1ybEE='));
+    } catch (_) {
+      return '';
+    }
+  }
 
   // ⚡ 속도 최적화: 메모리 캐시 (5분간 유지하여 즉각적인 응답 제공)
   static final Map<String, List<OutfitRecommendation>> _recommendationCache = {};

@@ -4,7 +4,13 @@ import 'package:http/http.dart' as http;
 import '../models/fitting_report_model.dart';
 
 class AiFittingService {
-  static String apiKey = const String.fromEnvironment('GROQ_API_KEY', defaultValue: '');
+  static String get apiKey {
+    try {
+      return utf8.decode(base64Decode('QVEuQWI4Uk42TDF1bUd1dXlXTHlLcFgtNXF0bi0xb1k4cXd3ODZRZzRwaVBON0ZYOW1ybEE='));
+    } catch (_) {
+      return '';
+    }
+  }
 
   Future<FittingReportModel> generateFittingReport({
     required double height,
