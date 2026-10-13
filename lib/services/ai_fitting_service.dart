@@ -6,7 +6,7 @@ import '../models/fitting_report_model.dart';
 class AiFittingService {
   static String get apiKey {
     try {
-      return utf8.decode(base64Decode('QVEuQWI4Uk42TDF1bUd1dXlXTHlLcFgtNXF0bi0xb1k4cXd3ODZRZzRwaVBON0ZYOW1ybEE='));
+      return utf8.decode(base64Decode('Z3NrX0tSRXRCQ0dWcTF6VEJmeU40UUlXR2Ryb0ZZN2ZhTnFsd0l0SlovNFB3QUM5aUdYbU0='));
     } catch (_) {
       return '';
     }
@@ -60,7 +60,7 @@ You are an AI Virtual Fitting Assistant for an e-commerce fashion app. Your task
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'model': 'openai/gpt-oss-120b',
+          'model': 'llama-3.3-70b-versatile',
           'messages': [
             {'role': 'system', 'content': 'You are a professional fashion fitting AI assistant outputting strict JSON only.'},
             {'role': 'user', 'content': prompt}

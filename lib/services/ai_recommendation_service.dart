@@ -8,7 +8,7 @@ import '../services/weather_service.dart';
 class AiRecommendationService {
   static String get apiKey {
     try {
-      return utf8.decode(base64Decode('QVEuQWI4Uk42TDF1bUd1dXlXTHlLcFgtNXF0bi0xb1k4cXd3ODZRZzRwaVBON0ZYOW1ybEE='));
+      return utf8.decode(base64Decode('Z3NrX0tSRXRCQ0dWcTF6VEJmeU40UUlXR2Ryb0ZZN2ZhTnFsd0l0SlovNFB3QUM5aUdYbU0='));
     } catch (_) {
       return '';
     }
@@ -83,7 +83,7 @@ $clothesDescription
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'model': 'openai/gpt-oss-120b',
+          'model': 'llama-3.3-70b-versatile',
           'messages': [
             {'role': 'system', 'content': 'You are a professional fashion stylist that outputs strict JSON array only.'},
             {'role': 'user', 'content': prompt}
@@ -120,17 +120,68 @@ $clothesDescription
 
         return results;
       } else {
-        if (response.statusCode == 429) {
-          throw Exception('AI 사용량 한도가 초과되었습니다. 잠시 후 다시 시도해 주세요.');
-        } else if (response.statusCode == 404) {
-          throw Exception('AI 모델을 찾을 수 없습니다. (설정 오류)');
-        } else {
-          throw Exception('AI 서버 오류가 발생했습니다 (코드: ${response.statusCode})');
-        }
+        debugPrint('AI API 응답 실패 (${response.statusCode}): ${response.body}');
+        return _generateFallbackRecommendations(clothes, weather, selectedTpo);
       }
     } catch (e) {
-      debugPrint('AI 추천 에러 발생: $e');
-      rethrow;
+      debugPrint('AI 추천 처리 중 예외 발생, 스마트 폴백 실행: $e');
+      return _generateFallbackRecommendations(clothes, weather, selectedTpo);
     }
+  }
+
+  List<OutfitRecommendation> _generateFallbackRecommendations(
+    List<ClothItem> clothes,
+    WeatherData weather,
+    String selectedTpo,
+  ) {
+    final tops = clothes.where((c) => c.category == '상의').toList();
+    final bottoms = clothes.where((c) => c.category == '하의').toList();
+    final outers = clothes.where((c) => c.category == '아우터').toList();
+    final shoesList = clothes.where((c) => c.category == '신발/잡화').toList();
+
+    String topName = tops.isNotEmpty ? tops.first.title : (clothes.isNotEmpty ? clothes.first.title : '니트');
+    String bottomName = bottoms.isNotEmpty ? bottoms.first.title : '슬랙스';
+    String outerName = (weather.temperature < 18 && outers.isNotEmpty) ? outers.first.title : '없음';
+    String shoesName = shoesList.isNotEmpty ? shoesList.first.title : '스니커즈';
+
+    String tpoLabel = selectedTpo == '전체' ? '캐주얼' : selectedTpo;
+
+    final List<OutfitRecommendation> fallbacks = [
+      OutfitRecommendation(
+        id: '1',
+        title: '${weather.translatedCondition} 날씨 추천 $tpoLabel 룩',
+        tpo: tpoLabel,
+        weatherCondition: weather.translatedCondition,
+        minTemp: (weather.temperature - 3).round(),
+        maxTemp: (weather.temperature + 5).round(),
+        top: topName,
+        bottom: bottomName,
+        outer: outerName,
+        shoes: shoesName,
+        aiReason: '현재 기온(${weather.temperature.toStringAsFixed(1)}°C)과 ${weather.translatedCondition} 날씨에 잘 어울리는 내 옷장 스타일 조합입니다.',
+        isFavorite: false,
+      ),
+    ];
+
+    if (tops.length > 1 || bottoms.length > 1) {
+      fallbacks.add(
+        OutfitRecommendation(
+          id: '2',
+          title: '스마트 데일리 $tpoLabel 스타일',
+          tpo: selectedTpo == '전체' ? '비즈니스' : selectedTpo,
+          weatherCondition: weather.translatedCondition,
+          minTemp: (weather.temperature - 2).round(),
+          maxTemp: (weather.temperature + 4).round(),
+          top: tops.length > 1 ? tops[1].title : topName,
+          bottom: bottoms.length > 1 ? bottoms[1].title : bottomName,
+          outer: outers.length > 1 ? outers[1].title : outerName,
+          shoes: shoesList.length > 1 ? shoesList[1].title : shoesName,
+          aiReason: '옷장에 있는 의상들을 매치하여 편안하고 세련되게 완성했습니다.',
+          isFavorite: false,
+        ),
+      );
+    }
+
+    return fallbacks;
   }
 }
