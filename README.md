@@ -1,6 +1,6 @@
 # style_pulse
 
-A new Flutter project.
+https://sumin-coder.github.io/school_project/
 
 ## Getting Started
 
