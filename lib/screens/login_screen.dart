@@ -144,6 +144,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (errStr.contains('unauthorized-domain')) {
           msg = 'Firebase 도메인 설정 필요: Firebase 콘솔 > Authentication > Settings > 승인된 도메인에 sumin-coder.github.io 를 등록해 주세요.';
+        } else if (errStr.contains('permission-denied')) {
+          msg = 'Firebase DB 보안 규칙 설정 필요: Firestore Database > Rules 탭에서 allow read, write: if true; 를 설정해 주세요.';
         } else if (errStr.contains('popup-blocked') || errStr.contains('popup_blocked')) {
           msg = '브라우저 팝업이 차단되었습니다. 주소창 우측에서 팝업 허용을 설정하고 다시 시도해 주세요.';
         } else if (errStr.contains('operation-not-allowed')) {

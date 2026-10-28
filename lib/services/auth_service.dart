@@ -82,10 +82,14 @@ class AuthService {
         gender: gender,
       );
 
-      await _firestore
-          .collection('users')
-          .doc(credential.user!.uid)
-          .set(newUser.toMap());
+      try {
+        await _firestore
+            .collection('users')
+            .doc(credential.user!.uid)
+            .set(newUser.toMap());
+      } catch (e) {
+        debugPrint('Firestore 유저 생성 예외: $e');
+      }
     }
 
     return credential;
@@ -144,18 +148,22 @@ class AuthService {
 
       String dummyUid = 'kakao_${kakaoUser.id}';
 
-      final userDocRef = _firestore.collection('users').doc(dummyUid);
-      final docSnapshot = await userDocRef.get();
+      try {
+        final userDocRef = _firestore.collection('users').doc(dummyUid);
+        final docSnapshot = await userDocRef.get();
 
-      if (!docSnapshot.exists) {
-        UserModel newUser = UserModel(
-          uid: dummyUid,
-          email: kakaoEmail,
-          name: kakaoNickname,
-          gender: '선택안함',
-        );
+        if (!docSnapshot.exists) {
+          UserModel newUser = UserModel(
+            uid: dummyUid,
+            email: kakaoEmail,
+            name: kakaoNickname,
+            gender: '선택안함',
+          );
 
-        await userDocRef.set(newUser.toMap());
+          await userDocRef.set(newUser.toMap());
+        }
+      } catch (e) {
+        debugPrint('Firestore 카카오 유저 연동 예외: $e');
       }
 
       User? firebaseUser = _auth.currentUser;
@@ -189,20 +197,24 @@ class AuthService {
         final User? firebaseUser = userCredential.user;
 
         if (firebaseUser != null) {
-          final userDocRef = _firestore.collection('users').doc(firebaseUser.uid);
-          final docSnapshot = await userDocRef.get();
+          try {
+            final userDocRef = _firestore.collection('users').doc(firebaseUser.uid);
+            final docSnapshot = await userDocRef.get();
 
-          if (!docSnapshot.exists) {
-            UserModel newUser = UserModel(
-              uid: firebaseUser.uid,
-              email: (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
-                  ? firebaseUser.email!
-                  : '${firebaseUser.uid}@google.com',
-              name: firebaseUser.displayName ?? '구글회원',
-              gender: '선택안함',
-            );
+            if (!docSnapshot.exists) {
+              UserModel newUser = UserModel(
+                uid: firebaseUser.uid,
+                email: (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
+                    ? firebaseUser.email!
+                    : '${firebaseUser.uid}@google.com',
+                name: firebaseUser.displayName ?? '구글회원',
+                gender: '선택안함',
+              );
 
-            await userDocRef.set(newUser.toMap());
+              await userDocRef.set(newUser.toMap());
+            }
+          } catch (e) {
+            debugPrint('Firestore 구글 유저 정보 연동 예외 (보안규칙 등): $e');
           }
         }
 
@@ -232,20 +244,24 @@ class AuthService {
       User? firebaseUser = userCredential.user;
 
       if (firebaseUser != null) {
-        final userDocRef = _firestore.collection('users').doc(firebaseUser.uid);
-        final docSnapshot = await userDocRef.get();
+        try {
+          final userDocRef = _firestore.collection('users').doc(firebaseUser.uid);
+          final docSnapshot = await userDocRef.get();
 
-        if (!docSnapshot.exists) {
-          UserModel newUser = UserModel(
-            uid: firebaseUser.uid,
-            email: (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
-                ? firebaseUser.email!
-                : '${firebaseUser.uid}@google.com',
-            name: firebaseUser.displayName ?? '구글회원',
-            gender: '선택안함',
-          );
+          if (!docSnapshot.exists) {
+            UserModel newUser = UserModel(
+              uid: firebaseUser.uid,
+              email: (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
+                  ? firebaseUser.email!
+                  : '${firebaseUser.uid}@google.com',
+              name: firebaseUser.displayName ?? '구글회원',
+              gender: '선택안함',
+            );
 
-          await userDocRef.set(newUser.toMap());
+            await userDocRef.set(newUser.toMap());
+          }
+        } catch (e) {
+          debugPrint('Firestore 모바일 구글 유저 연동 예외: $e');
         }
       }
 
@@ -291,18 +307,22 @@ class AuthService {
 
         String dummyUid = 'naver_$naverId';
 
-        final userDocRef = _firestore.collection('users').doc(dummyUid);
-        final docSnapshot = await userDocRef.get();
+        try {
+          final userDocRef = _firestore.collection('users').doc(dummyUid);
+          final docSnapshot = await userDocRef.get();
 
-        if (!docSnapshot.exists) {
-          UserModel newUser = UserModel(
-            uid: dummyUid,
-            email: naverEmail,
-            name: naverName,
-            gender: naverGender,
-          );
+          if (!docSnapshot.exists) {
+            UserModel newUser = UserModel(
+              uid: dummyUid,
+              email: naverEmail,
+              name: naverName,
+              gender: naverGender,
+            );
 
-          await userDocRef.set(newUser.toMap());
+            await userDocRef.set(newUser.toMap());
+          }
+        } catch (e) {
+          debugPrint('Firestore 네이버 유저 연동 예외: $e');
         }
 
         User? firebaseUser = _auth.currentUser;
