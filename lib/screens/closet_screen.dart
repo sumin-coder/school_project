@@ -115,7 +115,7 @@ class _ClosetScreenState extends State<ClosetScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('스마트 옷장'),
@@ -134,6 +134,7 @@ class _ClosetScreenState extends State<ClosetScreen> {
             unselectedLabelColor: isDarkMode ? Colors.grey[400] : Colors.grey[600],
             tabs: const [
               Tab(text: '전체'),
+              Tab(icon: Icon(Icons.favorite, size: 16), text: '즐겨찾기'),
               Tab(text: '상의'),
               Tab(text: '하의'),
               Tab(text: '아우터'),
@@ -155,6 +156,7 @@ class _ClosetScreenState extends State<ClosetScreen> {
             return TabBarView(
               children: [
                 _buildClothingGrid('전체', clothes, isDarkMode),
+                _buildClothingGrid('즐겨찾기', clothes, isDarkMode),
                 _buildClothingGrid('상의', clothes, isDarkMode),
                 _buildClothingGrid('하의', clothes, isDarkMode),
                 _buildClothingGrid('아우터', clothes, isDarkMode),
@@ -181,7 +183,9 @@ class _ClosetScreenState extends State<ClosetScreen> {
   ) {
     final filteredList = category == '전체'
         ? allClothes
-        : allClothes.where((item) => item.category == category).toList();
+        : category == '즐겨찾기'
+            ? allClothes.where((item) => item.isFavorite).toList()
+            : allClothes.where((item) => item.category == category).toList();
 
     if (filteredList.isEmpty) {
       return Center(
@@ -189,13 +193,16 @@ class _ClosetScreenState extends State<ClosetScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.checkroom,
+              category == '즐겨찾기' ? Icons.favorite_border : Icons.checkroom,
               size: 64,
               color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
             ),
             const SizedBox(height: 12),
             Text(
-              '등록된 $category(이)가 없습니다.',
+              category == '즐겨찾기'
+                  ? '즐겨찾기(찜)한 옷이 없습니다.\n하트 버튼을 눌러 관심 옷을 추가해 보세요!'
+                  : '등록된 $category(이)가 없습니다.',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                 fontSize: 16,

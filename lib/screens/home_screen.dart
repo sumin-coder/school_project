@@ -9,7 +9,6 @@ import '../services/ai_recommendation_service.dart';
 import '../widgets/home/weather_banner_card.dart';
 import '../widgets/home/home_ai_curation_card.dart';
 import '../widgets/home/recent_clothes_section.dart';
-import 'avatar_fitting_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(int index)? onTabChange;
@@ -133,63 +132,6 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             WeatherBannerCard(weatherFuture: _weatherFuture),
-            const SizedBox(height: 16),
-
-            // 🎮 3D 게임형 아바타 피팅룸 실행 배너
-            InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AvatarFittingScreen(clothes: widget.recentItems),
-                  ),
-                );
-              },
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF6B73FF), Color(0xFF000DFF)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF6B73FF).withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.sports_esports, color: Colors.white, size: 30),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '🎮 3D 게임형 아바타 피팅룸',
-                            style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            '내 전신 사진을 올려 3D 아바타에 내 옷을 입혀보세요!',
-                            style: TextStyle(color: Colors.white70, fontSize: 11),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.arrow_forward_ios, color: Colors.white, size: 14),
-                  ],
-                ),
-              ),
-            ),
-
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
