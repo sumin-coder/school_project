@@ -40,21 +40,22 @@ class _RecommendationCardState extends State<RecommendationCard> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 1,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(14.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 🏷️ 헤더: TPO 태그 + 코디 제목 + 찜 버튼
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     '#${widget.item.tpo}',
@@ -90,42 +91,54 @@ class _RecommendationCardState extends State<RecommendationCard> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                _buildClothChip(Icons.checkroom, widget.item.top, isDarkMode),
-                _buildClothChip(Icons.airline_seat_legroom_normal, widget.item.bottom, isDarkMode),
-                if (widget.item.outer != '없음')
-                  _buildClothChip(Icons.dry_cleaning, widget.item.outer, isDarkMode),
-                _buildClothChip(Icons.downhill_skiing, widget.item.shoes, isDarkMode),
-              ],
+            const SizedBox(height: 14),
+
+            // 🖼️ 홈 화면처럼 실제 옷 사진이 보이는 가로 아이템 카드리스트
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildOutfitItemCard('상의', widget.item.top, Icons.checkroom, isDarkMode),
+                  const SizedBox(width: 8),
+                  _buildOutfitItemCard('하의', widget.item.bottom, Icons.airline_seat_legroom_normal, isDarkMode),
+                  if (widget.item.outer.isNotEmpty && widget.item.outer != '없음') ...[
+                    const SizedBox(width: 8),
+                    _buildOutfitItemCard('아우터', widget.item.outer, Icons.dry_cleaning, isDarkMode),
+                  ],
+                  if (widget.item.shoes.isNotEmpty && widget.item.shoes != '없음') ...[
+                    const SizedBox(width: 8),
+                    _buildOutfitItemCard('신발', widget.item.shoes, Icons.downhill_skiing, isDarkMode),
+                  ],
+                ],
+              ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
+
+            // ✨ AI 코디 추천 이유 (접기/펼치기)
             InkWell(
               onTap: () {
                 setState(() {
                   _isExpanded = !_isExpanded;
                 });
               },
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: isDarkMode ? AppColors.darkContainerBackground : Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.auto_awesome, size: 15, color: AppColors.primary),
-                    const SizedBox(width: 6),
+                    const Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         _isExpanded ? widget.item.aiReason : 'AI 추천 이유 보기',
                         style: TextStyle(
                           fontSize: 12,
                           color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                          height: 1.3,
                         ),
                         maxLines: _isExpanded ? null : 1,
                         overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
@@ -146,42 +159,74 @@ class _RecommendationCardState extends State<RecommendationCard> {
     );
   }
 
-  Widget _buildClothChip(IconData fallbackIcon, String label, bool isDarkMode) {
-    if (label.isEmpty || label == '없음') return const SizedBox.shrink();
+  Widget _buildOutfitItemCard(
+    String categoryLabel,
+    String clothTitle,
+    IconData fallbackIcon,
+    bool isDarkMode,
+  ) {
+    if (clothTitle.isEmpty || clothTitle == '없음') {
+      return const SizedBox.shrink();
+    }
 
-    final matchedCloth = _findClothByTitle(label);
+    final matchedCloth = _findClothByTitle(clothTitle);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      width: 92,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       decoration: BoxDecoration(
         color: isDarkMode ? AppColors.darkCardBackground : Colors.grey[50],
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
         ),
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (matchedCloth != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: ClothThumbnail(item: matchedCloth, size: 20),
-            )
-          else
-            Icon(
-              fallbackIcon,
-              size: 14,
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
             ),
-          const SizedBox(width: 6),
+            child: Text(
+              categoryLabel,
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (matchedCloth != null)
+            ClothThumbnail(item: matchedCloth, size: 52)
+          else
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                fallbackIcon,
+                size: 26,
+                color: AppColors.primary,
+              ),
+            ),
+          const SizedBox(height: 8),
           Text(
-            label,
+            clothTitle,
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
               color: isDarkMode ? Colors.grey[200] : Colors.black87,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
