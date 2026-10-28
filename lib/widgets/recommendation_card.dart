@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../models/cloth_item.dart';
 import '../models/outfit_recommendation.dart';
+import 'cloth_thumbnail.dart';
 
 class RecommendationCard extends StatefulWidget {
   final OutfitRecommendation item;
+  final List<ClothItem> clothes;
   final VoidCallback onFavoriteToggle;
 
   const RecommendationCard({
     super.key,
     required this.item,
+    this.clothes = const [],
     required this.onFavoriteToggle,
   });
 
@@ -18,6 +22,18 @@ class RecommendationCard extends StatefulWidget {
 
 class _RecommendationCardState extends State<RecommendationCard> {
   bool _isExpanded = false;
+
+  ClothItem? _findClothByTitle(String title) {
+    if (title.isEmpty || title == '없음') return null;
+    final cleanTitle = title.trim().toLowerCase();
+    for (final c in widget.clothes) {
+      final name = c.title.trim().toLowerCase();
+      if (name == cleanTitle || name.contains(cleanTitle) || cleanTitle.contains(name)) {
+        return c;
+      }
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -130,9 +146,13 @@ class _RecommendationCardState extends State<RecommendationCard> {
     );
   }
 
-  Widget _buildClothChip(IconData icon, String label, bool isDarkMode) {
+  Widget _buildClothChip(IconData fallbackIcon, String label, bool isDarkMode) {
+    if (label.isEmpty || label == '없음') return const SizedBox.shrink();
+
+    final matchedCloth = _findClothByTitle(label);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: isDarkMode ? AppColors.darkCardBackground : Colors.grey[50],
         borderRadius: BorderRadius.circular(16),
@@ -143,12 +163,18 @@ class _RecommendationCardState extends State<RecommendationCard> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 14,
-            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-          ),
-          const SizedBox(width: 4),
+          if (matchedCloth != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: ClothThumbnail(item: matchedCloth, size: 20),
+            )
+          else
+            Icon(
+              fallbackIcon,
+              size: 14,
+              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+            ),
+          const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(

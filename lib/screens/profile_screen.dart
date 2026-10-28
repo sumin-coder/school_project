@@ -116,9 +116,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    // 💡 실시간 등록된 옷 카테고리별 정밀 통계 계산
     final totalCount = widget.clothes.length;
     final topsCount = widget.clothes.where((c) => c.category == '상의').length;
     final bottomsCount = widget.clothes.where((c) => c.category == '하의').length;
+    final outersCount = widget.clothes.where((c) => c.category == '아우터').length;
+    final shoesCount = widget.clothes.where((c) => c.category == '신발/잡화').length;
+    final favoriteCount = widget.clothes.where((c) => c.isFavorite).length;
 
     return Scaffold(
       appBar: AppBar(
@@ -156,6 +160,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
+            // 📊 1행 통계: 전체 옷, 상의, 하의
             Row(
               children: [
                 StatCard(
@@ -163,17 +168,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   count: '$totalCount개',
                   icon: Icons.checkroom,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 StatCard(
                   title: '상의',
                   count: '$topsCount개',
                   icon: Icons.dry_cleaning,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 StatCard(
                   title: '하의',
                   count: '$bottomsCount개',
                   icon: Icons.straighten,
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            // 📊 2행 통계: 아우터, 신발/잡화, 찜한 옷
+            Row(
+              children: [
+                StatCard(
+                  title: '아우터',
+                  count: '$outersCount개',
+                  icon: Icons.layers,
+                ),
+                const SizedBox(width: 10),
+                StatCard(
+                  title: '신발/잡화',
+                  count: '$shoesCount개',
+                  icon: Icons.downhill_skiing,
+                ),
+                const SizedBox(width: 10),
+                StatCard(
+                  title: '찜한 옷',
+                  count: '$favoriteCount개',
+                  icon: Icons.favorite,
                 ),
               ],
             ),

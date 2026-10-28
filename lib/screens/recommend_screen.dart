@@ -382,6 +382,7 @@ class _RecommendScreenState extends State<RecommendScreen> {
                                 final item = filteredList[index];
                                 return RecommendationCard(
                                   item: item,
+                                  clothes: widget.clothes,
                                   onFavoriteToggle: () {
                                     setState(() {
                                       item.isFavorite = !item.isFavorite;
