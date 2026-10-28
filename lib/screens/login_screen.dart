@@ -118,7 +118,18 @@ class _LoginScreenState extends State<LoginScreen> {
       final user = await _authService.signInWithGoogle();
 
       if (user != null && mounted) {
-        final userEmail = user.email ?? 'google_user';
+        final userEmail = (user.email != null && user.email!.isNotEmpty)
+            ? user.email!
+            : '${user.uid}@google.com';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✨ 구글 계정으로 로그인되었습니다!'),
+            backgroundColor: AppColors.primary,
+            duration: Duration(seconds: 2),
+          ),
+        );
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -129,14 +140,21 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (mounted) {
         String msg = '구글 로그인 오류: $e';
-        if (e.toString().contains('unauthorized-domain')) {
-          msg = 'Firebase 콘솔 설정 필요: Authentication > Settings > 승인된 도메인에 sumin-coder.github.io 등록이 필요합니다.';
+        final errStr = e.toString();
+
+        if (errStr.contains('unauthorized-domain')) {
+          msg = 'Firebase 도메인 설정 필요: Firebase 콘솔 > Authentication > Settings > 승인된 도메인에 sumin-coder.github.io 를 등록해 주세요.';
+        } else if (errStr.contains('popup-blocked') || errStr.contains('popup_blocked')) {
+          msg = '브라우저 팝업이 차단되었습니다. 주소창 우측에서 팝업 허용을 설정하고 다시 시도해 주세요.';
+        } else if (errStr.contains('operation-not-allowed')) {
+          msg = 'Firebase 콘솔 > Authentication > Sign-in method 에서 구글(Google) 제공업체를 활성화해 주세요.';
         }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(msg),
             backgroundColor: Colors.redAccent,
-            duration: const Duration(seconds: 6),
+            duration: const Duration(seconds: 8),
           ),
         );
       }

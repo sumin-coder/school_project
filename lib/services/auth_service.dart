@@ -180,7 +180,7 @@ class AuthService {
   Future<User?> signInWithGoogle() async {
     try {
       if (kIsWeb) {
-        // 🌐 웹 환경: Firebase Auth 팝업 로그인으로 Null 에러 100% 방지
+        // 🌐 웹 환경: Firebase Auth 팝업 로그인
         final GoogleAuthProvider googleProvider = GoogleAuthProvider();
         googleProvider.addScope('email');
         googleProvider.addScope('profile');
@@ -216,17 +216,12 @@ class AuthService {
         debugPrint('GoogleSignIn 이미 초기화됨: $e');
       }
 
-      final GoogleSignInAccount? googleUser = await GoogleSignIn.instance.authenticate();
-      if (googleUser == null) {
-        debugPrint('사용자가 구글 로그인을 취소했습니다.');
-        return null;
-      }
+      final GoogleSignInAccount googleUser = await GoogleSignIn.instance.authenticate();
 
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
       if (googleAuth.idToken == null) {
-        debugPrint('구글 인증 토큰이 존재하지 않습니다.');
-        return null;
+        throw Exception('구글 인증 토큰이 존재하지 않습니다.');
       }
 
       final OAuthCredential credential = GoogleAuthProvider.credential(
@@ -260,22 +255,21 @@ class AuthService {
         debugPrint('사용자가 구글 로그인 팝업을 닫았습니다.');
         return null;
       }
-      debugPrint('Firebase 구글 로그인 오류: $e');
-      return null;
+      debugPrint('Firebase 구글 로그인 오류 (${e.code}): ${e.message}');
+      rethrow;
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) {
         debugPrint('사용자가 구글 로그인을 취소했습니다.');
         return null;
       }
       debugPrint('구글 로그인 오류 (GoogleSignInException): $e');
-      return null;
+      rethrow;
     } catch (e) {
-      if (e.toString().contains('null value') || e.toString().contains('canceled') || e.toString().contains('popup_closed')) {
-        debugPrint('구글 로그인 취소 또는 null 처리: $e');
+      if (e.toString().contains('cancelled') || e.toString().contains('popup-closed-by-user')) {
         return null;
       }
       debugPrint('구글 로그인 중 오류 발생: $e');
-      return null;
+      rethrow;
     }
   }
 
