@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/cloth_item.dart';
 import '../models/outfit_recommendation.dart';
 import '../services/weather_service.dart';
 
 class AiRecommendationService {
+  static const String _favKey = 'style_pulse_fav_rec_titles';
+
   static String get apiKey {
     try {
       return utf8.decode(base64Decode('Z3NrX0tSRXRCQ0dWcTF6VEJmeU40UUlXR2Ryb0ZZN2ZhTnFsd0l0SlovNFB3QUM5aUdYbU0='));
@@ -17,6 +20,35 @@ class AiRecommendationService {
   // ⚡ 속도 최적화: 메모리 캐시 (5분간 유지하여 즉각적인 응답 제공)
   static final Map<String, List<OutfitRecommendation>> _recommendationCache = {};
   static final Map<String, DateTime> _cacheTime = {};
+
+  // 💖 영구 즐겨찾기 상태 동기화 및 토글 처리
+  static Future<void> toggleRecommendationFavorite(OutfitRecommendation item) async {
+    item.isFavorite = !item.isFavorite;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> favs = prefs.getStringList(_favKey) ?? [];
+      if (item.isFavorite) {
+        if (!favs.contains(item.title)) favs.add(item.title);
+      } else {
+        favs.remove(item.title);
+      }
+      await prefs.setStringList(_favKey, favs);
+    } catch (e) {
+      debugPrint('추천 즐겨찾기 저장 에러: $e');
+    }
+  }
+
+  static Future<void> syncFavoriteStates(List<OutfitRecommendation> items) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> favs = prefs.getStringList(_favKey) ?? [];
+      for (final item in items) {
+        if (favs.contains(item.title)) {
+          item.isFavorite = true;
+        }
+      }
+    } catch (_) {}
+  }
 
   Future<List<OutfitRecommendation>> fetchAiRecommendations({
     required List<ClothItem> clothes,
@@ -35,7 +67,9 @@ class AiRecommendationService {
         _recommendationCache.containsKey(cacheKey) &&
         _cacheTime.containsKey(cacheKey)) {
       if (DateTime.now().difference(_cacheTime[cacheKey]!) < const Duration(minutes: 5)) {
-        return _recommendationCache[cacheKey]!;
+        final cachedResults = _recommendationCache[cacheKey]!;
+        await syncFavoriteStates(cachedResults);
+        return cachedResults;
       }
     }
 
@@ -115,17 +149,23 @@ $clothesDescription
           isFavorite: false,
         )).toList();
 
+        await syncFavoriteStates(results);
+
         _recommendationCache[cacheKey] = results;
         _cacheTime[cacheKey] = DateTime.now();
 
         return results;
       } else {
         debugPrint('AI API 응답 실패 (${response.statusCode}): ${response.body}');
-        return _generateFallbackRecommendations(clothes, weather, selectedTpo);
+        final fallbacks = _generateFallbackRecommendations(clothes, weather, selectedTpo);
+        await syncFavoriteStates(fallbacks);
+        return fallbacks;
       }
     } catch (e) {
       debugPrint('AI 추천 처리 중 예외 발생, 스마트 폴백 실행: $e');
-      return _generateFallbackRecommendations(clothes, weather, selectedTpo);
+      final fallbacks = _generateFallbackRecommendations(clothes, weather, selectedTpo);
+      await syncFavoriteStates(fallbacks);
+      return fallbacks;
     }
   }
 

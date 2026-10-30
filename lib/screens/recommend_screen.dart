@@ -383,10 +383,9 @@ class _RecommendScreenState extends State<RecommendScreen> {
                                 return RecommendationCard(
                                   item: item,
                                   clothes: widget.clothes,
-                                  onFavoriteToggle: () {
-                                    setState(() {
-                                      item.isFavorite = !item.isFavorite;
-                                    });
+                                  onFavoriteToggle: () async {
+                                    await AiRecommendationService.toggleRecommendationFavorite(item);
+                                    if (mounted) setState(() {});
                                   },
                                 );
                               },
