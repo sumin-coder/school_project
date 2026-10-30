@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
 
 import 'constants/app_colors.dart';
@@ -42,7 +43,29 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: currentMode,
-          home: const LoginScreen(),
+          // 🔒 브라우저 새로고침 시에도 로그인 세션 자동 유지
+          home: StreamBuilder<fb_auth.User?>(
+            stream: fb_auth.FirebaseAuth.instance.authStateChanges(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                );
+              }
+
+              if (snapshot.hasData && snapshot.data != null) {
+                final user = snapshot.data!;
+                final userEmail = (user.email != null && user.email!.isNotEmpty)
+                    ? user.email!
+                    : '${user.uid}@stylepulse.com';
+                return MainNavigationScreen(userEmail: userEmail);
+              }
+
+              return const LoginScreen();
+            },
+          ),
         );
       },
     );

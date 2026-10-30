@@ -165,30 +165,20 @@ class _ClothCardState extends State<ClothCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              widget.item.category,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const Icon(
-                            Icons.accessibility_new,
-                            size: 14,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          widget.item.category,
+                          style: const TextStyle(
+                            fontSize: 10,
                             color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
                           ),
-                        ],
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
