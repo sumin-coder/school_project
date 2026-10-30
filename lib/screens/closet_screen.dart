@@ -6,7 +6,6 @@ import '../constants/app_colors.dart';
 import '../models/cloth_item.dart';
 import '../widgets/cloth_card.dart';
 import '../widgets/dialogs/add_cloth_dialog.dart';
-import '../widgets/dialogs/api_key_dialog.dart';
 import '../widgets/dialogs/confirm_delete_dialog.dart';
 import '../widgets/sheets/image_source_sheet.dart';
 import '../services/closet_service.dart';
@@ -106,7 +105,6 @@ class _ClosetScreenState extends State<ClosetScreen> {
     ImageSourceSheet.show(
       context: context,
       onSourceSelected: _pickImage,
-      onApiKeySelected: () => ApiKeyDialog.show(context),
     );
   }
 
@@ -119,13 +117,6 @@ class _ClosetScreenState extends State<ClosetScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('스마트 옷장'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.auto_fix_high),
-              tooltip: '배경 제거 API 키 설정',
-              onPressed: () => ApiKeyDialog.show(context),
-            ),
-          ],
           bottom: TabBar(
             tabAlignment: TabAlignment.start,
             isScrollable: true,

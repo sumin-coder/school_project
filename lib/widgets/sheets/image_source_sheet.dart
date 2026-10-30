@@ -4,18 +4,15 @@ import '../../constants/app_colors.dart';
 
 class ImageSourceSheet extends StatelessWidget {
   final Function(ImageSource source) onSourceSelected;
-  final VoidCallback onApiKeySelected;
 
   const ImageSourceSheet({
     super.key,
     required this.onSourceSelected,
-    required this.onApiKeySelected,
   });
 
   static void show({
     required BuildContext context,
     required Function(ImageSource source) onSourceSelected,
-    required VoidCallback onApiKeySelected,
   }) {
     showModalBottomSheet(
       context: context,
@@ -24,7 +21,6 @@ class ImageSourceSheet extends StatelessWidget {
       ),
       builder: (context) => ImageSourceSheet(
         onSourceSelected: onSourceSelected,
-        onApiKeySelected: onApiKeySelected,
       ),
     );
   }
@@ -48,15 +44,6 @@ class ImageSourceSheet extends StatelessWidget {
             onTap: () {
               Navigator.pop(context);
               onSourceSelected(ImageSource.gallery);
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.auto_fix_high, color: AppColors.primary),
-            title: const Text('배경 제거 (remove.bg) API 키 설정'),
-            onTap: () {
-              Navigator.pop(context);
-              onApiKeySelected();
             },
           ),
         ],
