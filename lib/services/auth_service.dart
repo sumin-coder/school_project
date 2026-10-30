@@ -6,14 +6,56 @@ import 'package:flutter_naver_login/flutter_naver_login.dart';
 import 'package:flutter_naver_login/interface/types/naver_login_result.dart';
 import 'package:flutter_naver_login/interface/types/naver_login_status.dart';
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart' as kakao;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  static const String _sessionKey = 'style_pulse_logged_in_email';
+
   // 현재 사용자 Get
   User? get currentUser => _auth.currentUser;
+
+  // 🔒 로그인 세션 영구 보관 (SharedPreferences)
+  static Future<void> saveLoggedInUserEmail(String email) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_sessionKey, email.trim());
+    } catch (e) {
+      debugPrint('세션 저장 실패: $e');
+    }
+  }
+
+  static Future<String?> getSavedLoggedInUserEmail() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedEmail = prefs.getString(_sessionKey);
+      if (savedEmail != null && savedEmail.isNotEmpty) {
+        return savedEmail;
+      }
+
+      final fbUser = FirebaseAuth.instance.currentUser;
+      if (fbUser != null) {
+        return (fbUser.email != null && fbUser.email!.isNotEmpty)
+            ? fbUser.email!
+            : '${fbUser.uid}@stylepulse.com';
+      }
+    } catch (e) {
+      debugPrint('세션 읽기 실패: $e');
+    }
+    return null;
+  }
+
+  static Future<void> clearSavedLoggedInUserEmail() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_sessionKey);
+    } catch (e) {
+      debugPrint('세션 삭제 실패: $e');
+    }
+  }
 
   /// 🔍 아이디 중복 확인 (Firestore users 컬렉션에서 해당 아이디 존재 여부 확인)
   Future<bool> checkIdAvailability(String id) async {
@@ -344,6 +386,7 @@ class AuthService {
 
   // 로그아웃
   Future<void> signOut() async {
+    await clearSavedLoggedInUserEmail();
     try {
       await GoogleSignIn.instance.signOut();
     } catch (_) {}

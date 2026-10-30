@@ -1,11 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../constants/app_colors.dart';
+import '../main.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/social_login_row.dart';
-import '../main.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -19,10 +20,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
 
-  bool _isPasswordVisible = false;
+  final AuthService _authService = AuthService();
   bool _isLoading = false;
+  bool _isPasswordVisible = false;
 
   @override
   void dispose() {
@@ -43,11 +44,10 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text,
       );
 
-      // 로그인된 사용자의 이메일 가져오기 (없으면 입력값 사용)
       final userEmail = userCredential?.user?.email ?? _emailController.text.trim();
+      await AuthService.saveLoggedInUserEmail(userEmail);
 
       if (mounted) {
-        // 💡 수정됨: MainNavigationScreen에 userEmail 전달
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -89,6 +89,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (user != null && mounted) {
         final userEmail = user.email ?? 'naver_user';
+        await AuthService.saveLoggedInUserEmail(userEmail);
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -122,20 +124,24 @@ class _LoginScreenState extends State<LoginScreen> {
             ? user.email!
             : '${user.uid}@google.com';
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✨ 구글 계정으로 로그인되었습니다!'),
-            backgroundColor: AppColors.primary,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        await AuthService.saveLoggedInUserEmail(userEmail);
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MainNavigationScreen(userEmail: userEmail),
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✨ 구글 계정으로 로그인되었습니다!'),
+              backgroundColor: AppColors.primary,
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MainNavigationScreen(userEmail: userEmail),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -173,6 +179,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (user != null && mounted) {
         final userEmail = user.email ?? 'kakao_user';
+        await AuthService.saveLoggedInUserEmail(userEmail);
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -206,56 +214,64 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Image.asset('assets/logo/app_logo.png', width: 65, height: 65,),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 20),
+                  Image.asset(
+                    'assets/logo/app_logo.png',
+                    height: 100,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.checkroom,
+                      size: 80,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   const Text(
                     'Style Pulse',
-                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,
+                      letterSpacing: 1.2,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '나만의 스마트한 모바일 옷장',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    ),
                   ),
-                  const SizedBox(height: 36),
-
-                  // 이메일 또는 아이디 입력 필드
+                  const SizedBox(height: 40),
                   CustomTextField(
                     controller: _emailController,
                     labelText: '이메일 또는 아이디',
-                    hintText: '아이디 또는 이메일을 입력해 주세요',
+                    hintText: '이메일 또는 아이디를 입력해 주세요.',
                     prefixIcon: Icons.person_outline,
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return '아이디 또는 이메일을 입력해 주세요.';
+                        return '이메일 또는 아이디를 입력해 주세요.';
                       }
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
-
-                  // 비밀번호 입력 필드
+                  const SizedBox(height: 14),
                   CustomTextField(
                     controller: _passwordController,
                     labelText: '비밀번호',
-                    hintText: '비밀번호를 입력해 주세요',
+                    hintText: '비밀번호를 입력해 주세요.',
                     prefixIcon: Icons.lock_outline,
                     obscureText: !_isPasswordVisible,
                     suffixIcon: IconButton(
@@ -270,7 +286,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
+                      if (value == null || value.trim().isEmpty) {
                         return '비밀번호를 입력해 주세요.';
                       }
                       if (value.length < 6) {
@@ -280,49 +296,50 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-
-                  // 로그인 버튼
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _handleLogin,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                        : const Text(
-                      '로그인',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : const Text(
+                              '로그인',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // 회원가입 페이지 이동 영역
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         '계정이 없으신가요?',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                          fontSize: 13,
+                        ),
                       ),
                       TextButton(
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) => const SignUpScreen(),
-                            ),
+                            MaterialPageRoute(builder: (context) => const SignUpScreen()),
                           );
                         },
                         child: const Text(
@@ -330,35 +347,36 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(
                             color: AppColors.primary,
                             fontWeight: FontWeight.bold,
+                            fontSize: 13,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-
-                  // 간편로그인 구분선
+                  const SizedBox(height: 16),
                   Row(
                     children: [
-                      Expanded(child: Divider(color: Colors.grey[300])),
+                      Expanded(child: Divider(color: isDarkMode ? Colors.grey[800] : Colors.grey[300])),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
                         child: Text(
                           '간편로그인',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                          ),
                         ),
                       ),
-                      Expanded(child: Divider(color: Colors.grey[300])),
+                      Expanded(child: Divider(color: isDarkMode ? Colors.grey[800] : Colors.grey[300])),
                     ],
                   ),
                   const SizedBox(height: 20),
-
-                  // 원형 간편 소셜 로그인 행 위젯 배치
                   SocialLoginRow(
                     onNaverPressed: _handleNaverLogin,
                     onKakaoPressed: _handleKakaoLogin,
                     onGooglePressed: _handleGoogleLogin,
                   ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),

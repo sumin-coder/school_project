@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
 
 import 'constants/app_colors.dart';
@@ -13,6 +12,7 @@ import 'screens/closet_screen.dart';
 import 'screens/recommend_screen.dart';
 import 'screens/profile_screen.dart';
 import 'services/closet_service.dart';
+import 'services/auth_service.dart';
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
@@ -43,9 +43,9 @@ class MyApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: currentMode,
-          // 🔒 브라우저 새로고침 시에도 로그인 세션 자동 유지
-          home: StreamBuilder<fb_auth.User?>(
-            stream: fb_auth.FirebaseAuth.instance.authStateChanges(),
+          // 🔒 웹 새로고침 시에도 로그인 세션 100% 영구 보존
+          home: FutureBuilder<String?>(
+            future: AuthService.getSavedLoggedInUserEmail(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
@@ -55,12 +55,9 @@ class MyApp extends StatelessWidget {
                 );
               }
 
-              if (snapshot.hasData && snapshot.data != null) {
-                final user = snapshot.data!;
-                final userEmail = (user.email != null && user.email!.isNotEmpty)
-                    ? user.email!
-                    : '${user.uid}@stylepulse.com';
-                return MainNavigationScreen(userEmail: userEmail);
+              final savedEmail = snapshot.data;
+              if (savedEmail != null && savedEmail.isNotEmpty) {
+                return MainNavigationScreen(userEmail: savedEmail);
               }
 
               return const LoginScreen();
