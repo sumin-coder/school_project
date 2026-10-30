@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../../models/cloth_item.dart';
 import '../../models/outfit_recommendation.dart';
+import '../../screens/avatar_fitting_screen.dart';
 import '../cloth_thumbnail.dart';
 
 class HomeAiCurationCard extends StatelessWidget {
@@ -35,6 +36,26 @@ class HomeAiCurationCard extends StatelessWidget {
     } catch (_) {
       return null;
     }
+  }
+
+  void _navigateToAvatarFittingRoom(BuildContext context, OutfitRecommendation item) {
+    final topItem = _findClothItemByTitle(item.top);
+    final bottomItem = _findClothItemByTitle(item.bottom);
+    final outerItem = _findClothItemByTitle(item.outer);
+    final shoesItem = _findClothItemByTitle(item.shoes);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AvatarFittingScreen(
+          clothes: recentItems,
+          initialEquippedTop: topItem,
+          initialEquippedBottom: bottomItem,
+          initialEquippedOuter: outerItem,
+          initialEquippedShoes: shoesItem,
+        ),
+      ),
+    );
   }
 
   Widget _buildOutfitItemChip(
@@ -201,126 +222,147 @@ class HomeAiCurationCard extends StatelessWidget {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '#${item.tpo}',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    item.title,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.auto_awesome, size: 12, color: Colors.amber),
-                      SizedBox(width: 4),
-                      Text(
-                        'AI 추천',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.amber,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildOutfitItemChip('상의', item.top, Icons.checkroom, isDarkMode),
-                _buildOutfitItemChip('하의', item.bottom, Icons.airline_seat_legroom_normal, isDarkMode),
-                if (item.outer.isNotEmpty && item.outer != '없음')
-                  _buildOutfitItemChip('아우터', item.outer, Icons.dry_cleaning, isDarkMode),
-                if (item.shoes.isNotEmpty && item.shoes != '없음')
-                  _buildOutfitItemChip('신발', item.shoes, Icons.downhill_skiing, isDarkMode),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDarkMode ? AppColors.darkContainerBackground : Colors.grey[100],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: InkWell(
+        onTap: () => _navigateToAvatarFittingRoom(context, item),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  const Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '#${item.tpo}',
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      item.aiReason,
+                      item.title,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.auto_awesome, size: 12, color: Colors.amber),
+                        SizedBox(width: 4),
+                        Text(
+                          'AI 추천',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildOutfitItemChip('상의', item.top, Icons.checkroom, isDarkMode),
+                  _buildOutfitItemChip('하의', item.bottom, Icons.airline_seat_legroom_normal, isDarkMode),
+                  if (item.outer.isNotEmpty && item.outer != '없음')
+                    _buildOutfitItemChip('아우터', item.outer, Icons.dry_cleaning, isDarkMode),
+                  if (item.shoes.isNotEmpty && item.shoes != '없음')
+                    _buildOutfitItemChip('신발', item.shoes, Icons.downhill_skiing, isDarkMode),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDarkMode ? AppColors.darkContainerBackground : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        item.aiReason,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // 🎮 3D 아바타 피팅룸 바로 이동 및 착용 버튼
+              SizedBox(
+                width: double.infinity,
+                height: 42,
+                child: ElevatedButton.icon(
+                  onPressed: () => _navigateToAvatarFittingRoom(context, item),
+                  icon: const Icon(Icons.sports_esports, size: 18),
+                  label: const Text('🎮 3D 아바타에서 착용샷 보기', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.refresh, color: AppColors.primary),
+                    tooltip: '다른 코디 제안받기',
+                    onPressed: onRefresh,
+                  ),
+                  TextButton.icon(
+                    onPressed: () => onTabChange?.call(2),
+                    icon: const Icon(Icons.arrow_forward, size: 16, color: AppColors.primary),
+                    label: const Text(
+                      '더 많은 AI 코디 보기',
                       style: TextStyle(
-                        fontSize: 13,
-                        color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
-                        height: 1.4,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.refresh, color: AppColors.primary),
-                  tooltip: '다른 코디 제안받기',
-                  onPressed: onRefresh,
-                ),
-                TextButton.icon(
-                  onPressed: () => onTabChange?.call(2),
-                  icon: const Icon(Icons.arrow_forward, size: 16, color: AppColors.primary),
-                  label: const Text(
-                    '더 많은 AI 코디 보기',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
