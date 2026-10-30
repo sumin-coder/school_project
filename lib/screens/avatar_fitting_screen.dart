@@ -141,7 +141,12 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
     });
   }
 
-  Widget _buildEquippedClothImage(ClothItem? item, double top, double left, double width, double height) {
+  Widget _buildEquippedClothImageRelative(ClothItem? item, {
+    required double top,
+    required double left,
+    required double width,
+    required double height,
+  }) {
     if (item == null) return const SizedBox.shrink();
 
     Widget? child;
@@ -286,44 +291,75 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
                           ),
                         ),
 
-                        // 아바타 피규어 이미지 (내 사진 업로드 기반 또는 기본 3D 아바타)
-                        if (_isGeneratingAvatar)
-                          const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                        // 🧍 정밀 비율 스케일드 3D 아바타 피규어 & 레이어 박스 (260 x 380)
+                        SizedBox(
+                          width: 260,
+                          height: 380,
+                          child: Stack(
+                            alignment: Alignment.topCenter,
                             children: [
-                              CircularProgressIndicator(color: AppColors.primary),
-                              SizedBox(height: 16),
-                              Text('AI가 3D 아바타 모델을 합성하고 있습니다...'),
-                            ],
-                          )
-                        else if (_customAvatarBytes != null)
-                          Image.memory(_customAvatarBytes!, height: 420, fit: BoxFit.contain)
-                        else
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.accessibility_new,
-                                size: 260,
-                                color: isDarkMode ? Colors.grey[700] : Colors.grey[400],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '하단 옷장의 옷을 드래그해서 아바타에 놓아보세요!\n(상단 📷 버튼으로 내 전신 사진을 올릴 수도 있습니다)',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              // 1. 아바타 피규어 마네킹 또는 내 사진 기반 아바타
+                              if (_isGeneratingAvatar)
+                                const Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      CircularProgressIndicator(color: AppColors.primary),
+                                      SizedBox(height: 16),
+                                      Text('AI가 3D 아바타 모델을 합성 중입니다...'),
+                                    ],
+                                  ),
+                                )
+                              else if (_customAvatarBytes != null)
+                                Image.memory(_customAvatarBytes!, width: 260, height: 380, fit: BoxFit.contain)
+                              else
+                                Positioned(
+                                  top: 30,
+                                  child: Icon(
+                                    Icons.accessibility_new,
+                                    size: 260,
+                                    color: isDarkMode ? Colors.grey[700] : Colors.grey[400],
+                                  ),
                                 ),
+
+                              // 2. 👗 하의 (Pants/Jeans) - 허리에서 발목까지
+                              _buildEquippedClothImageRelative(
+                                _equippedBottom,
+                                top: 145,
+                                left: 55,
+                                width: 150,
+                                height: 150,
+                              ),
+
+                              // 3. 👕 상의 (Top/Sweater) - 어깨부터 허리선까지
+                              _buildEquippedClothImageRelative(
+                                _equippedTop,
+                                top: 68,
+                                left: 45,
+                                width: 170,
+                                height: 130,
+                              ),
+
+                              // 4. 🧥 아우터 (Coat/Jacket) - 어깨부터 허벅지까지
+                              _buildEquippedClothImageRelative(
+                                _equippedOuter,
+                                top: 62,
+                                left: 35,
+                                width: 190,
+                                height: 150,
+                              ),
+
+                              // 5. 👟 신발 (Shoes) - 발목 아래 발 위치
+                              _buildEquippedClothImageRelative(
+                                _equippedShoes,
+                                top: 275,
+                                left: 60,
+                                width: 140,
+                                height: 60,
                               ),
                             ],
                           ),
-
-                        // 👗 아바타 레이어 위 장착된 의상 오버레이
-                        _buildEquippedClothImage(_equippedShoes, 320, 80, 140, 70),
-                        _buildEquippedClothImage(_equippedBottom, 200, 70, 160, 140),
-                        _buildEquippedClothImage(_equippedTop, 100, 75, 150, 130),
-                        _buildEquippedClothImage(_equippedOuter, 90, 60, 180, 150),
+                        ),
 
                         // 상단 현재 착용 정보 안내 태그
                         Positioned(
@@ -338,6 +374,19 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
                             child: Text(
                               '착용 중: ${_getEquippedSummary()}',
                               style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+
+                        // 하단 드래그 안내 텍스트
+                        Positioned(
+                          bottom: 12,
+                          child: Text(
+                            '하단 옷장의 옷을 드래그해서 아바타에 놓아보세요!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                             ),
                           ),
                         ),
