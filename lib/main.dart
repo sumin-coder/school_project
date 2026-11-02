@@ -137,6 +137,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               NavigationDestination(
                 icon: Icon(Icons.person_outline),
                 selectedIcon: Icon(Icons.person, color: AppColors.primary),
+
+
                 label: '프로필',
               ),
             ],

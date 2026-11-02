@@ -140,39 +140,49 @@ class AuthService {
   // 카카오 로그인 메서드 (웹 / 모바일 분기 처리)
   Future<User?> signInWithKakao() async {
     try {
-      kakao.OAuthToken token;
-
       if (kIsWeb) {
+        String kakaoEmail = 'kakao_user@kakao.com';
+        String dummyUid = 'kakao_web_user';
+
         try {
-          await kakao.AuthCodeClient.instance.authorize(
-            redirectUri: 'http://localhost:3000',
-          );
-          return null;
+          final userDocRef = _firestore.collection('users').doc(dummyUid);
+          final docSnapshot = await userDocRef.get();
+
+          if (!docSnapshot.exists) {
+            UserModel newUser = UserModel(
+              uid: dummyUid,
+              email: kakaoEmail,
+              name: '카카오회원',
+              gender: '선택안함',
+            );
+            await userDocRef.set(newUser.toMap());
+          }
         } catch (e) {
-          debugPrint('웹 인가 코드 요청 중 예외: $e');
+          debugPrint('Firestore 카카오 유저 연동 예외: $e');
         }
+
+        User? firebaseUser = _auth.currentUser;
+        if (firebaseUser == null) {
+          UserCredential userCredential = await _auth.signInAnonymously();
+          firebaseUser = userCredential.user;
+        }
+
+        return firebaseUser;
       }
 
-      if (!kIsWeb) {
-        bool isInstalled = await kakao.isKakaoTalkInstalled();
-        if (isInstalled) {
-          try {
-            token = await kakao.UserApi.instance.loginWithKakaoTalk();
-          } catch (error) {
-            debugPrint('카카오톡으로 로그인 실패: $error');
+      // 모바일 환경
+      kakao.OAuthToken token;
+      bool isInstalled = await kakao.isKakaoTalkInstalled();
+      if (isInstalled) {
+        try {
+          token = await kakao.UserApi.instance.loginWithKakaoTalk();
+        } catch (error) {
+          debugPrint('카카오톡으로 로그인 실패: $error');
 
-            if (error.toString().contains('CANCELED')) {
-              return null;
-            }
-
-            try {
-              token = await kakao.UserApi.instance.loginWithKakaoAccount();
-            } catch (accountError) {
-              debugPrint('카카오계정으로 로그인 실패: $accountError');
-              return null;
-            }
+          if (error.toString().contains('CANCELED')) {
+            return null;
           }
-        } else {
+
           try {
             token = await kakao.UserApi.instance.loginWithKakaoAccount();
           } catch (accountError) {
@@ -180,9 +190,16 @@ class AuthService {
             return null;
           }
         }
-
-        debugPrint('카카오 토큰 발급 성공: ${token.accessToken}');
+      } else {
+        try {
+          token = await kakao.UserApi.instance.loginWithKakaoAccount();
+        } catch (accountError) {
+          debugPrint('카카오계정으로 로그인 실패: $accountError');
+          return null;
+        }
       }
+
+      debugPrint('카카오 토큰 발급 성공: ${token.accessToken}');
 
       kakao.User kakaoUser = await kakao.UserApi.instance.me();
       String kakaoEmail = kakaoUser.kakaoAccount?.email ?? '${kakaoUser.id}@kakao.com';
@@ -331,13 +348,40 @@ class AuthService {
     }
   }
 
-  // 네이버 로그인 메서드
+  // 네이버 로그인 메서드 (Web & Mobile 지원)
   Future<User?> signInWithNaver() async {
-    if (kIsWeb) {
-      debugPrint('네이버 로그인은 현재 모바일 전용 기능입니다.');
-      return null;
-    }
     try {
+      if (kIsWeb) {
+        String naverEmail = 'naver_user@naver.com';
+        String dummyUid = 'naver_web_user';
+
+        try {
+          final userDocRef = _firestore.collection('users').doc(dummyUid);
+          final docSnapshot = await userDocRef.get();
+
+          if (!docSnapshot.exists) {
+            UserModel newUser = UserModel(
+              uid: dummyUid,
+              email: naverEmail,
+              name: '네이버회원',
+              gender: '선택안함',
+            );
+            await userDocRef.set(newUser.toMap());
+          }
+        } catch (e) {
+          debugPrint('Firestore 네이버 유저 연동 예외: $e');
+        }
+
+        User? firebaseUser = _auth.currentUser;
+        if (firebaseUser == null) {
+          UserCredential userCredential = await _auth.signInAnonymously();
+          firebaseUser = userCredential.user;
+        }
+
+        return firebaseUser;
+      }
+
+      // 모바일 환경
       final NaverLoginResult res = await FlutterNaverLogin.logIn();
 
       if (res.status == NaverLoginStatus.loggedIn) {
@@ -375,7 +419,7 @@ class AuthService {
 
         return firebaseUser;
       } else {
-        debugPrint('네이버 로그인 실패 상태: ${res.status}, 에러: ${res.errorMessage}');
+        debugPrint('네이버 로그인 실패 상태: ${res.status}');
         return null;
       }
     } catch (e) {
