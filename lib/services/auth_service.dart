@@ -137,65 +137,27 @@ class AuthService {
     return credential;
   }
 
-  // 카카오 로그인 메서드 (웹 / 모바일 분기 처리)
+  // 카카오 로그인 메서드 (웹 & 모바일 공식 Kakao OAuth 팝업)
   Future<User?> signInWithKakao() async {
     try {
-      if (kIsWeb) {
-        String kakaoEmail = 'kakao_user@kakao.com';
-        String dummyUid = 'kakao_web_user';
-
-        try {
-          final userDocRef = _firestore.collection('users').doc(dummyUid);
-          final docSnapshot = await userDocRef.get();
-
-          if (!docSnapshot.exists) {
-            UserModel newUser = UserModel(
-              uid: dummyUid,
-              email: kakaoEmail,
-              name: '카카오회원',
-              gender: '선택안함',
-            );
-            await userDocRef.set(newUser.toMap());
-          }
-        } catch (e) {
-          debugPrint('Firestore 카카오 유저 연동 예외: $e');
-        }
-
-        User? firebaseUser = _auth.currentUser;
-        if (firebaseUser == null) {
-          UserCredential userCredential = await _auth.signInAnonymously();
-          firebaseUser = userCredential.user;
-        }
-
-        return firebaseUser;
-      }
-
-      // 모바일 환경
       kakao.OAuthToken token;
-      bool isInstalled = await kakao.isKakaoTalkInstalled();
-      if (isInstalled) {
-        try {
-          token = await kakao.UserApi.instance.loginWithKakaoTalk();
-        } catch (error) {
-          debugPrint('카카오톡으로 로그인 실패: $error');
 
-          if (error.toString().contains('CANCELED')) {
-            return null;
-          }
-
-          try {
-            token = await kakao.UserApi.instance.loginWithKakaoAccount();
-          } catch (accountError) {
-            debugPrint('카카오계정으로 로그인 실패: $accountError');
-            return null;
-          }
-        }
+      if (kIsWeb) {
+        // 🌐 웹 환경: 카카오 공식 계정 로그인 팝업 실행
+        token = await kakao.UserApi.instance.loginWithKakaoAccount();
       } else {
-        try {
+        // 📱 모바일 환경
+        bool isInstalled = await kakao.isKakaoTalkInstalled();
+        if (isInstalled) {
+          try {
+            token = await kakao.UserApi.instance.loginWithKakaoTalk();
+          } catch (error) {
+            debugPrint('카카오톡으로 로그인 실패: $error');
+            if (error.toString().contains('CANCELED')) return null;
+            token = await kakao.UserApi.instance.loginWithKakaoAccount();
+          }
+        } else {
           token = await kakao.UserApi.instance.loginWithKakaoAccount();
-        } catch (accountError) {
-          debugPrint('카카오계정으로 로그인 실패: $accountError');
-          return null;
         }
       }
 
@@ -234,12 +196,13 @@ class AuthService {
       return firebaseUser;
     } catch (e) {
       if (e.toString().contains("authentication token doesn't exist") ||
-          e.toString().contains('CANCELED')) {
-        debugPrint('사용자가 카카오 로그인을 취소했거나 인증 토큰이 존재하지 않습니다.');
-      } else {
-        debugPrint('카카오 로그인 중 오류 발생: $e');
+          e.toString().contains('CANCELED') ||
+          e.toString().contains('window closed')) {
+        debugPrint('사용자가 카카오 로그인 팝업을 닫았습니다.');
+        return null;
       }
-      return null;
+      debugPrint('카카오 로그인 중 오류 발생: $e');
+      rethrow;
     }
   }
 
