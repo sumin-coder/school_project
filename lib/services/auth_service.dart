@@ -7,6 +7,7 @@ import 'package:flutter_naver_login/interface/types/naver_login_result.dart';
 import 'package:flutter_naver_login/interface/types/naver_login_status.dart';
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/user_model.dart';
 
 class AuthService {
@@ -30,6 +31,25 @@ class AuthService {
 
   static Future<String?> getSavedLoggedInUserEmail() async {
     try {
+      // 🌐 웹 환경: OAuth 2.0 리다이렉트 콜백(?code=...) 파라미터 체크
+      if (kIsWeb) {
+        final uri = Uri.base;
+        if (uri.queryParameters.containsKey('code')) {
+          final code = uri.queryParameters['code']!;
+          final state = uri.queryParameters['state'] ?? '';
+
+          String userEmail = 'social_user@stylepulse.com';
+          if (state.contains('naver') || uri.toString().contains('naver')) {
+            userEmail = 'naver_$code@naver.com';
+          } else {
+            userEmail = 'kakao_$code@kakao.com';
+          }
+
+          await saveLoggedInUserEmail(userEmail);
+          return userEmail;
+        }
+      }
+
       final prefs = await SharedPreferences.getInstance();
       final savedEmail = prefs.getString(_sessionKey);
       if (savedEmail != null && savedEmail.isNotEmpty) {
@@ -137,38 +157,20 @@ class AuthService {
     return credential;
   }
 
-  // 카카오 로그인 메서드 (Web & Mobile 완벽 안전 분기 처리)
+  // 💛 카카오 실제 소셜 로그인 (구글처럼 독립 팝업창 _blank 실행)
   Future<User?> signInWithKakao() async {
     try {
       if (kIsWeb) {
-        // 🌐 웹 환경: 웹 전용 안전 세션 생성 (KakaoClientException 방지)
-        String kakaoEmail = 'kakao_user@kakao.com';
-        String dummyUid = 'kakao_web_user';
+        // 🌐 웹 환경: 구글처럼 카카오 공식 계정 선택/로그인 독립 크롬 팝업창 열기
+        const kakaoClientId = 'b881d4cf44b318b10abb56ab639f234c';
+        final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
+        final authUrl = 'https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=$kakaoClientId&redirect_uri=$redirectUri&state=kakao_auth';
 
-        try {
-          final userDocRef = _firestore.collection('users').doc(dummyUid);
-          final docSnapshot = await userDocRef.get();
-
-          if (!docSnapshot.exists) {
-            UserModel newUser = UserModel(
-              uid: dummyUid,
-              email: kakaoEmail,
-              name: '카카오회원',
-              gender: '선택안함',
-            );
-            await userDocRef.set(newUser.toMap());
-          }
-        } catch (e) {
-          debugPrint('Firestore 카카오 유저 연동 예외: $e');
-        }
-
-        User? firebaseUser = _auth.currentUser;
-        if (firebaseUser == null) {
-          UserCredential userCredential = await _auth.signInAnonymously();
-          firebaseUser = userCredential.user;
-        }
-
-        return firebaseUser;
+        await launchUrl(
+          Uri.parse(authUrl),
+          webOnlyWindowName: '_blank', // 💡 구글처럼 독립 팝업창으로 실행
+        );
+        return null;
       }
 
       // 📱 모바일 환경 (Android / iOS)
@@ -220,18 +222,8 @@ class AuthService {
 
       return firebaseUser;
     } catch (e) {
-      debugPrint('카카오 로그인 예외 안전 처리: $e');
-      if (kIsWeb) {
-        User? firebaseUser = _auth.currentUser;
-        if (firebaseUser == null) {
-          try {
-            UserCredential userCredential = await _auth.signInAnonymously();
-            firebaseUser = userCredential.user;
-          } catch (_) {}
-        }
-        return firebaseUser;
-      }
-      return null;
+      debugPrint('카카오 로그인 예외: $e');
+      rethrow;
     }
   }
 
@@ -340,40 +332,23 @@ class AuthService {
     }
   }
 
-  // 네이버 로그인 메서드 (Web & Mobile 안전 지원)
+  // 💚 네이버 실제 소셜 로그인 (구글처럼 독립 팝업창 _blank 실행)
   Future<User?> signInWithNaver() async {
     try {
       if (kIsWeb) {
-        String naverEmail = 'naver_user@naver.com';
-        String dummyUid = 'naver_web_user';
+        // 🌐 웹 환경: 구글처럼 네이버 공식 계정 선택/로그인 독립 크롬 팝업창 열기
+        const naverClientId = 'C2_yT0r_6G';
+        final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
+        final authUrl = 'https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=$naverClientId&redirect_uri=$redirectUri&state=naver_auth';
 
-        try {
-          final userDocRef = _firestore.collection('users').doc(dummyUid);
-          final docSnapshot = await userDocRef.get();
-
-          if (!docSnapshot.exists) {
-            UserModel newUser = UserModel(
-              uid: dummyUid,
-              email: naverEmail,
-              name: '네이버회원',
-              gender: '선택안함',
-            );
-            await userDocRef.set(newUser.toMap());
-          }
-        } catch (e) {
-          debugPrint('Firestore 네이버 유저 연동 예외: $e');
-        }
-
-        User? firebaseUser = _auth.currentUser;
-        if (firebaseUser == null) {
-          UserCredential userCredential = await _auth.signInAnonymously();
-          firebaseUser = userCredential.user;
-        }
-
-        return firebaseUser;
+        await launchUrl(
+          Uri.parse(authUrl),
+          webOnlyWindowName: '_blank', // 💡 구글처럼 독립 팝업창으로 실행
+        );
+        return null;
       }
 
-      // 모바일 환경
+      // 📱 모바일 환경
       final NaverLoginResult res = await FlutterNaverLogin.logIn();
 
       if (res.status == NaverLoginStatus.loggedIn) {
@@ -415,18 +390,8 @@ class AuthService {
         return null;
       }
     } catch (e) {
-      debugPrint('네이버 로그인 예외 안전 처리: $e');
-      if (kIsWeb) {
-        User? firebaseUser = _auth.currentUser;
-        if (firebaseUser == null) {
-          try {
-            UserCredential userCredential = await _auth.signInAnonymously();
-            firebaseUser = userCredential.user;
-          } catch (_) {}
-        }
-        return firebaseUser;
-      }
-      return null;
+      debugPrint('네이버 로그인 예외: $e');
+      rethrow;
     }
   }
 

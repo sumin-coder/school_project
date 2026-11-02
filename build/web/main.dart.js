@@ -107001,7 +107001,7 @@ s=p}for(;;)switch(s){case 0:p=4
 n=A.qI(2,A.qd().guo()+A.qd().gds(),B.Z,!1)
 m="https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=b881d4cf44b318b10abb56ab639f234c&redirect_uri="+A.j(n)+"&state=kakao_auth"
 s=7
-return A.l(A.aMW(A.er(m,0,null),"_self"),$async$A0)
+return A.l(A.aMW(A.er(m,0,null),"_blank"),$async$A0)
 case 7:q=null
 s=1
 break
@@ -107097,7 +107097,7 @@ s=p}for(;;)switch(s){case 0:p=4
 n=A.qI(2,A.qd().guo()+A.qd().gds(),B.Z,!1)
 m="https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=C2_yT0r_6G&redirect_uri="+A.j(n)+"&state=naver_auth"
 s=7
-return A.l(A.aMW(A.er(m,0,null),"_self"),$async$A1)
+return A.l(A.aMW(A.er(m,0,null),"_blank"),$async$A1)
 case 7:q=null
 s=1
 break
