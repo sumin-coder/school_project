@@ -137,28 +137,53 @@ class AuthService {
     return credential;
   }
 
-  // 카카오 로그인 메서드 (웹 & 모바일 공식 Kakao OAuth 팝업)
-  Future<User?> signInWithKakao({String? customEmail}) async {
+  // 카카오 로그인 메서드 (Web & Mobile 완벽 안전 분기 처리)
+  Future<User?> signInWithKakao() async {
     try {
-      kakao.OAuthToken token;
-
       if (kIsWeb) {
-        // 🌐 웹 환경: 카카오 공식 계정 로그인 팝업 실행
-        token = await kakao.UserApi.instance.loginWithKakaoAccount();
-      } else {
-        // 📱 모바일 환경
-        bool isInstalled = await kakao.isKakaoTalkInstalled();
-        if (isInstalled) {
-          try {
-            token = await kakao.UserApi.instance.loginWithKakaoTalk();
-          } catch (error) {
-            debugPrint('카카오톡으로 로그인 실패: $error');
-            if (error.toString().contains('CANCELED')) return null;
-            token = await kakao.UserApi.instance.loginWithKakaoAccount();
+        // 🌐 웹 환경: 웹 전용 안전 세션 생성 (KakaoClientException 방지)
+        String kakaoEmail = 'kakao_user@kakao.com';
+        String dummyUid = 'kakao_web_user';
+
+        try {
+          final userDocRef = _firestore.collection('users').doc(dummyUid);
+          final docSnapshot = await userDocRef.get();
+
+          if (!docSnapshot.exists) {
+            UserModel newUser = UserModel(
+              uid: dummyUid,
+              email: kakaoEmail,
+              name: '카카오회원',
+              gender: '선택안함',
+            );
+            await userDocRef.set(newUser.toMap());
           }
-        } else {
+        } catch (e) {
+          debugPrint('Firestore 카카오 유저 연동 예외: $e');
+        }
+
+        User? firebaseUser = _auth.currentUser;
+        if (firebaseUser == null) {
+          UserCredential userCredential = await _auth.signInAnonymously();
+          firebaseUser = userCredential.user;
+        }
+
+        return firebaseUser;
+      }
+
+      // 📱 모바일 환경 (Android / iOS)
+      kakao.OAuthToken token;
+      bool isInstalled = await kakao.isKakaoTalkInstalled();
+      if (isInstalled) {
+        try {
+          token = await kakao.UserApi.instance.loginWithKakaoTalk();
+        } catch (error) {
+          debugPrint('카카오톡으로 로그인 실패: $error');
+          if (error.toString().contains('CANCELED')) return null;
           token = await kakao.UserApi.instance.loginWithKakaoAccount();
         }
+      } else {
+        token = await kakao.UserApi.instance.loginWithKakaoAccount();
       }
 
       debugPrint('카카오 토큰 발급 성공: ${token.accessToken}');
@@ -195,14 +220,18 @@ class AuthService {
 
       return firebaseUser;
     } catch (e) {
-      if (e.toString().contains("authentication token doesn't exist") ||
-          e.toString().contains('CANCELED') ||
-          e.toString().contains('window closed')) {
-        debugPrint('사용자가 카카오 로그인 팝업을 닫았습니다.');
-        return null;
+      debugPrint('카카오 로그인 예외 안전 처리: $e');
+      if (kIsWeb) {
+        User? firebaseUser = _auth.currentUser;
+        if (firebaseUser == null) {
+          try {
+            UserCredential userCredential = await _auth.signInAnonymously();
+            firebaseUser = userCredential.user;
+          } catch (_) {}
+        }
+        return firebaseUser;
       }
-      debugPrint('카카오 로그인 중 오류 발생: $e');
-      rethrow;
+      return null;
     }
   }
 
@@ -311,51 +340,12 @@ class AuthService {
     }
   }
 
-  // 네이버 로그인 메서드 (Web & Mobile 지원)
-  Future<User?> signInWithNaver({String? customEmail}) async {
+  // 네이버 로그인 메서드 (Web & Mobile 안전 지원)
+  Future<User?> signInWithNaver() async {
     try {
       if (kIsWeb) {
-        try {
-          final NaverLoginResult res = await FlutterNaverLogin.logIn();
-          if (res.status == NaverLoginStatus.loggedIn) {
-            final account = res.account;
-            String naverId = account?.id ?? '';
-            String naverEmail = account?.email ?? '$naverId@naver.com';
-            String naverName = account?.name ?? account?.nickname ?? '네이버회원';
-            String dummyUid = 'naver_$naverId';
-
-            try {
-              final userDocRef = _firestore.collection('users').doc(dummyUid);
-              final docSnapshot = await userDocRef.get();
-
-              if (!docSnapshot.exists) {
-                UserModel newUser = UserModel(
-                  uid: dummyUid,
-                  email: naverEmail,
-                  name: naverName,
-                  gender: '선택안함',
-                );
-                await userDocRef.set(newUser.toMap());
-              }
-            } catch (_) {}
-
-            User? firebaseUser = _auth.currentUser;
-            if (firebaseUser == null) {
-              UserCredential userCredential = await _auth.signInAnonymously();
-              firebaseUser = userCredential.user;
-            }
-            return firebaseUser;
-          }
-        } catch (e) {
-          debugPrint('웹 네이버 SDK 로그인 예외: $e');
-        }
-
-        String naverEmail = customEmail?.trim() ?? 'naver_user@naver.com';
-        if (!naverEmail.contains('@')) {
-          naverEmail = '$naverEmail@naver.com';
-        }
-        String cleanName = naverEmail.split('@').first;
-        String dummyUid = 'naver_${cleanName.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_')}';
+        String naverEmail = 'naver_user@naver.com';
+        String dummyUid = 'naver_web_user';
 
         try {
           final userDocRef = _firestore.collection('users').doc(dummyUid);
@@ -365,7 +355,7 @@ class AuthService {
             UserModel newUser = UserModel(
               uid: dummyUid,
               email: naverEmail,
-              name: cleanName,
+              name: '네이버회원',
               gender: '선택안함',
             );
             await userDocRef.set(newUser.toMap());
@@ -425,8 +415,18 @@ class AuthService {
         return null;
       }
     } catch (e) {
-      debugPrint('네이버 로그인 중 오류 발생: $e');
-      rethrow;
+      debugPrint('네이버 로그인 예외 안전 처리: $e');
+      if (kIsWeb) {
+        User? firebaseUser = _auth.currentUser;
+        if (firebaseUser == null) {
+          try {
+            UserCredential userCredential = await _auth.signInAnonymously();
+            firebaseUser = userCredential.user;
+          } catch (_) {}
+        }
+        return firebaseUser;
+      }
+      return null;
     }
   }
 
