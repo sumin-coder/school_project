@@ -137,56 +137,28 @@ class AuthService {
     return credential;
   }
 
-  // 카카오 로그인 메서드 (웹 & 모바일 지원)
+  // 카카오 로그인 메서드 (웹 & 모바일 공식 Kakao OAuth 팝업)
   Future<User?> signInWithKakao({String? customEmail}) async {
     try {
-      if (kIsWeb) {
-        String kakaoEmail = customEmail?.trim() ?? 'kakao_user@kakao.com';
-        if (!kakaoEmail.contains('@')) {
-          kakaoEmail = '$kakaoEmail@kakao.com';
-        }
-        String cleanName = kakaoEmail.split('@').first;
-        String dummyUid = 'kakao_${cleanName.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_')}';
-
-        try {
-          final userDocRef = _firestore.collection('users').doc(dummyUid);
-          final docSnapshot = await userDocRef.get();
-
-          if (!docSnapshot.exists) {
-            UserModel newUser = UserModel(
-              uid: dummyUid,
-              email: kakaoEmail,
-              name: cleanName,
-              gender: '선택안함',
-            );
-            await userDocRef.set(newUser.toMap());
-          }
-        } catch (e) {
-          debugPrint('Firestore 카카오 유저 연동 예외: $e');
-        }
-
-        User? firebaseUser = _auth.currentUser;
-        if (firebaseUser == null) {
-          UserCredential userCredential = await _auth.signInAnonymously();
-          firebaseUser = userCredential.user;
-        }
-
-        return firebaseUser;
-      }
-
-      // 모바일 환경
       kakao.OAuthToken token;
-      bool isInstalled = await kakao.isKakaoTalkInstalled();
-      if (isInstalled) {
-        try {
-          token = await kakao.UserApi.instance.loginWithKakaoTalk();
-        } catch (error) {
-          debugPrint('카카오톡으로 로그인 실패: $error');
-          if (error.toString().contains('CANCELED')) return null;
+
+      if (kIsWeb) {
+        // 🌐 웹 환경: 카카오 공식 계정 로그인 팝업 실행
+        token = await kakao.UserApi.instance.loginWithKakaoAccount();
+      } else {
+        // 📱 모바일 환경
+        bool isInstalled = await kakao.isKakaoTalkInstalled();
+        if (isInstalled) {
+          try {
+            token = await kakao.UserApi.instance.loginWithKakaoTalk();
+          } catch (error) {
+            debugPrint('카카오톡으로 로그인 실패: $error');
+            if (error.toString().contains('CANCELED')) return null;
+            token = await kakao.UserApi.instance.loginWithKakaoAccount();
+          }
+        } else {
           token = await kakao.UserApi.instance.loginWithKakaoAccount();
         }
-      } else {
-        token = await kakao.UserApi.instance.loginWithKakaoAccount();
       }
 
       debugPrint('카카오 토큰 발급 성공: ${token.accessToken}');
@@ -226,7 +198,7 @@ class AuthService {
       if (e.toString().contains("authentication token doesn't exist") ||
           e.toString().contains('CANCELED') ||
           e.toString().contains('window closed')) {
-        debugPrint('사용자가 카카오 로그인을 취소했습니다.');
+        debugPrint('사용자가 카카오 로그인 팝업을 닫았습니다.');
         return null;
       }
       debugPrint('카카오 로그인 중 오류 발생: $e');
@@ -343,6 +315,41 @@ class AuthService {
   Future<User?> signInWithNaver({String? customEmail}) async {
     try {
       if (kIsWeb) {
+        try {
+          final NaverLoginResult res = await FlutterNaverLogin.logIn();
+          if (res.status == NaverLoginStatus.loggedIn) {
+            final account = res.account;
+            String naverId = account?.id ?? '';
+            String naverEmail = account?.email ?? '$naverId@naver.com';
+            String naverName = account?.name ?? account?.nickname ?? '네이버회원';
+            String dummyUid = 'naver_$naverId';
+
+            try {
+              final userDocRef = _firestore.collection('users').doc(dummyUid);
+              final docSnapshot = await userDocRef.get();
+
+              if (!docSnapshot.exists) {
+                UserModel newUser = UserModel(
+                  uid: dummyUid,
+                  email: naverEmail,
+                  name: naverName,
+                  gender: '선택안함',
+                );
+                await userDocRef.set(newUser.toMap());
+              }
+            } catch (_) {}
+
+            User? firebaseUser = _auth.currentUser;
+            if (firebaseUser == null) {
+              UserCredential userCredential = await _auth.signInAnonymously();
+              firebaseUser = userCredential.user;
+            }
+            return firebaseUser;
+          }
+        } catch (e) {
+          debugPrint('웹 네이버 SDK 로그인 예외: $e');
+        }
+
         String naverEmail = customEmail?.trim() ?? 'naver_user@naver.com';
         if (!naverEmail.contains('@')) {
           naverEmail = '$naverEmail@naver.com';
