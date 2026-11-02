@@ -32,6 +32,83 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // 🌐 웹 소셜 로그인 계정 입력 다이얼로그 (실제 유저 계정명 지정)
+  Future<String?> _showSocialWebLoginDialog({
+    required String providerName,
+    required Color color,
+    required String defaultSuffix,
+  }) async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.person,
+                color: color == const Color(0xFFFEE500) ? Colors.black87 : Colors.white,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text('$providerName 계정 로그인'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '웹 환경에서 사용할 $providerName 아이디 또는 이메일을 입력해 주세요.',
+              style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: '$providerName 아이디/이메일',
+                hintText: '예: sumin$defaultSuffix',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: color, width: 2),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final input = controller.text.trim();
+              if (input.isNotEmpty) {
+                Navigator.pop(context, input);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: color,
+              foregroundColor: color == const Color(0xFFFEE500) ? Colors.black87 : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('로그인', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   // 이메일/아이디 로그인 처리
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
@@ -83,16 +160,41 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // 네이버 로그인 핸들러 메서드
   Future<void> _handleNaverLogin() async {
+    String? inputEmail;
+    if (kIsWeb) {
+      inputEmail = await _showSocialWebLoginDialog(
+        providerName: '네이버',
+        color: const Color(0xFF03C75A),
+        defaultSuffix: '@naver.com',
+      );
+      if (inputEmail == null || inputEmail.isEmpty) return;
+    }
+
     setState(() => _isLoading = true);
     try {
-      final user = await _authService.signInWithNaver();
+      final user = await _authService.signInWithNaver(customEmail: inputEmail);
 
-      if (user != null && mounted) {
-        final userEmail = user.email ?? 'naver_user';
+      if (user != null) {
+        final userEmail = (inputEmail != null && inputEmail.isNotEmpty)
+            ? (inputEmail.contains('@') ? inputEmail : '$inputEmail@naver.com')
+            : (user.email ?? 'naver_user@naver.com');
+
+        final messenger = ScaffoldMessenger.of(context);
+        final nav = Navigator.of(context);
+
         await AuthService.saveLoggedInUserEmail(userEmail);
 
-        Navigator.pushReplacement(
-          context,
+        if (!mounted) return;
+
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('✨ 네이버 계정($userEmail)으로 로그인되었습니다!'),
+            backgroundColor: const Color(0xFF03C75A),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        nav.pushReplacement(
           MaterialPageRoute(
             builder: (context) => MainNavigationScreen(userEmail: userEmail),
           ),
@@ -173,29 +275,45 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // 카카오 로그인 핸들러 메서드
   Future<void> _handleKakaoLogin() async {
+    String? inputEmail;
+    if (kIsWeb) {
+      inputEmail = await _showSocialWebLoginDialog(
+        providerName: '카카오',
+        color: const Color(0xFFFEE500),
+        defaultSuffix: '@kakao.com',
+      );
+      if (inputEmail == null || inputEmail.isEmpty) return;
+    }
+
     setState(() => _isLoading = true);
     try {
-      final user = await _authService.signInWithKakao();
+      final user = await _authService.signInWithKakao(customEmail: inputEmail);
 
-      if (user != null && mounted) {
-        final userEmail = user.email ?? 'kakao_user';
+      if (user != null) {
+        final userEmail = (inputEmail != null && inputEmail.isNotEmpty)
+            ? (inputEmail.contains('@') ? inputEmail : '$inputEmail@kakao.com')
+            : (user.email ?? 'kakao_user@kakao.com');
+
+        final messenger = ScaffoldMessenger.of(context);
+        final nav = Navigator.of(context);
+
         await AuthService.saveLoggedInUserEmail(userEmail);
 
-        Navigator.pushReplacement(
-          context,
+        if (!mounted) return;
+
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('✨ 카카오 계정($userEmail)으로 로그인되었습니다!'),
+            backgroundColor: const Color(0xFFFFE800),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        nav.pushReplacement(
           MaterialPageRoute(
             builder: (context) => MainNavigationScreen(userEmail: userEmail),
           ),
         );
-      } else {
-        if (mounted && !kIsWeb) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('카카오 로그인 결과가 없습니다.'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
       }
     } catch (e) {
       if (mounted) {
