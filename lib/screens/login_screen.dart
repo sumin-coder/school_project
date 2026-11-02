@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../constants/app_colors.dart';
 import '../main.dart';
@@ -58,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(width: 10),
-            Text('$providerName 계정 로그인'),
+            Text('$providerName 로그인 확인'),
           ],
         ),
         content: Column(
@@ -66,8 +67,8 @@ class _LoginScreenState extends State<LoginScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '웹 환경에서 사용할 $providerName 아이디 또는 이메일을 입력해 주세요.',
-              style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+              '공식 $providerName 로그인 완료 후 사용하신 아이디 또는 이메일을 입력해 주세요.',
+              style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.4),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -75,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
               autofocus: true,
               decoration: InputDecoration(
                 labelText: '$providerName 아이디/이메일',
-                hintText: '예: sumin$defaultSuffix',
+                hintText: '예: mandu6325$defaultSuffix',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -102,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
               foregroundColor: color == const Color(0xFFFEE500) ? Colors.black87 : Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('로그인', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('로그인 완료', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -158,10 +159,21 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // 네이버 로그인 핸들러 메서드
+  // 네이버 로그인 핸들러 메서드 (공식 네이버 로그인 페이지 실행 연동)
   Future<void> _handleNaverLogin() async {
     String? inputEmail;
     if (kIsWeb) {
+      // 1. 공식 네이버 로그인 페이지(https://nid.naver.com/nidlogin.login) 실행
+      try {
+        await launchUrl(
+          Uri.parse('https://nid.naver.com/nidlogin.login'),
+          mode: LaunchMode.externalApplication,
+        );
+      } catch (e) {
+        debugPrint('네이버 공식 로그인 페이지 실행 에러: $e');
+      }
+
+      if (!mounted) return;
       inputEmail = await _showSocialWebLoginDialog(
         providerName: '네이버',
         color: const Color(0xFF03C75A),
@@ -273,10 +285,20 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // 카카오 로그인 핸들러 메서드
+  // 카카오 로그인 핸들러 메서드 (공식 카카오 로그인 페이지 연동)
   Future<void> _handleKakaoLogin() async {
     String? inputEmail;
     if (kIsWeb) {
+      try {
+        await launchUrl(
+          Uri.parse('https://accounts.kakao.com/login'),
+          mode: LaunchMode.externalApplication,
+        );
+      } catch (e) {
+        debugPrint('카카오 공식 로그인 페이지 실행 에러: $e');
+      }
+
+      if (!mounted) return;
       inputEmail = await _showSocialWebLoginDialog(
         providerName: '카카오',
         color: const Color(0xFFFEE500),
