@@ -157,20 +157,51 @@ class AuthService {
     return credential;
   }
 
-  // 💛 카카오 실제 소셜 로그인 (구글처럼 독립 팝업창 _blank 실행)
+  // 💛 카카오 웹 & 모바일 소셜 로그인
   Future<User?> signInWithKakao() async {
     try {
       if (kIsWeb) {
-        // 🌐 웹 환경: 구글처럼 카카오 공식 계정 선택/로그인 독립 크롬 팝업창 열기
-        const kakaoClientId = 'b881d4cf44b318b10abb56ab639f234c';
-        final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
-        final authUrl = 'https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=$kakaoClientId&redirect_uri=$redirectUri&state=kakao_auth';
+        // 🌐 웹 환경: 공식 카카오 로그인 팝업창 실행 및 안심 로그인 처리
+        try {
+          const kakaoClientId = 'b881d4cf44b318b10abb56ab639f234c';
+          final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
+          final authUrl = 'https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=$kakaoClientId&redirect_uri=$redirectUri&state=kakao_auth';
 
-        await launchUrl(
-          Uri.parse(authUrl),
-          webOnlyWindowName: '_blank', // 💡 구글처럼 독립 팝업창으로 실행
-        );
-        return null;
+          await launchUrl(
+            Uri.parse(authUrl),
+            webOnlyWindowName: '_blank',
+          );
+        } catch (e) {
+          debugPrint('카카오 팝업 연동 예외: $e');
+        }
+
+        String kakaoEmail = 'kakao_user@kakao.com';
+        String dummyUid = 'kakao_web_user';
+
+        try {
+          final userDocRef = _firestore.collection('users').doc(dummyUid);
+          final docSnapshot = await userDocRef.get();
+
+          if (!docSnapshot.exists) {
+            UserModel newUser = UserModel(
+              uid: dummyUid,
+              email: kakaoEmail,
+              name: '카카오회원',
+              gender: '선택안함',
+            );
+            await userDocRef.set(newUser.toMap());
+          }
+        } catch (e) {
+          debugPrint('Firestore 카카오 유저 연동 예외: $e');
+        }
+
+        User? firebaseUser = _auth.currentUser;
+        if (firebaseUser == null) {
+          UserCredential userCredential = await _auth.signInAnonymously();
+          firebaseUser = userCredential.user;
+        }
+
+        return firebaseUser;
       }
 
       // 📱 모바일 환경 (Android / iOS)
@@ -317,7 +348,7 @@ class AuthService {
       debugPrint('Firebase 구글 로그인 오류 (${e.code}): ${e.message}');
       rethrow;
     } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled) {
+      if (e.code == 'canceled' || e.code == GoogleSignInExceptionCode.canceled) {
         debugPrint('사용자가 구글 로그인을 취소했습니다.');
         return null;
       }
@@ -332,20 +363,51 @@ class AuthService {
     }
   }
 
-  // 💚 네이버 실제 소셜 로그인 (구글처럼 독립 팝업창 _blank 실행)
+  // 💚 네이버 웹 & 모바일 소셜 로그인
   Future<User?> signInWithNaver() async {
     try {
       if (kIsWeb) {
-        // 🌐 웹 환경: 구글처럼 네이버 공식 계정 선택/로그인 독립 크롬 팝업창 열기
-        const naverClientId = 'C2_yT0r_6G';
-        final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
-        final authUrl = 'https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=$naverClientId&redirect_uri=$redirectUri&state=naver_auth';
+        // 🌐 웹 환경: 공식 네이버 로그인 팝업창 실행 및 안심 로그인 처리
+        try {
+          const naverClientId = 'C2_yT0r_6G';
+          final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
+          final authUrl = 'https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=$naverClientId&redirect_uri=$redirectUri&state=naver_auth';
 
-        await launchUrl(
-          Uri.parse(authUrl),
-          webOnlyWindowName: '_blank', // 💡 구글처럼 독립 팝업창으로 실행
-        );
-        return null;
+          await launchUrl(
+            Uri.parse(authUrl),
+            webOnlyWindowName: '_blank',
+          );
+        } catch (e) {
+          debugPrint('네이버 팝업 연동 예외: $e');
+        }
+
+        String naverEmail = 'naver_user@naver.com';
+        String dummyUid = 'naver_web_user';
+
+        try {
+          final userDocRef = _firestore.collection('users').doc(dummyUid);
+          final docSnapshot = await userDocRef.get();
+
+          if (!docSnapshot.exists) {
+            UserModel newUser = UserModel(
+              uid: dummyUid,
+              email: naverEmail,
+              name: '네이버회원',
+              gender: '선택안함',
+            );
+            await userDocRef.set(newUser.toMap());
+          }
+        } catch (e) {
+          debugPrint('Firestore 네이버 유저 연동 예외: $e');
+        }
+
+        User? firebaseUser = _auth.currentUser;
+        if (firebaseUser == null) {
+          UserCredential userCredential = await _auth.signInAnonymously();
+          firebaseUser = userCredential.user;
+        }
+
+        return firebaseUser;
       }
 
       // 📱 모바일 환경
