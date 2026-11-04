@@ -39,7 +39,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     _userEmail = widget.userEmail;
 
-    if (_userEmail.contains('@')) {
+    if (_userEmail.startsWith('kakao_') || _userEmail.contains('kakao')) {
+      _userName = '카카오 회원';
+      _userEmail = 'kakao_member@kakao.com';
+    } else if (_userEmail.startsWith('naver_') || _userEmail.contains('naver')) {
+      _userName = '네이버 회원';
+      _userEmail = 'naver_member@naver.com';
+    } else if (_userEmail.contains('@')) {
       _userName = _userEmail.split('@').first;
     } else {
       _userName = '회원';

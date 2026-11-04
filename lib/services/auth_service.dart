@@ -31,18 +31,17 @@ class AuthService {
 
   static Future<String?> getSavedLoggedInUserEmail() async {
     try {
-      // 🌐 웹 환경: OAuth 2.0 리다이렉트 콜백(?code=...) 파라미터 체크
+      // 🌐 웹 환경: OAuth 2.0 리다이렉트 콜백(?code=...) 파라미터 체크 및 깔끔한 회원명 세팅
       if (kIsWeb) {
         final uri = Uri.base;
         if (uri.queryParameters.containsKey('code')) {
-          final code = uri.queryParameters['code']!;
           final state = uri.queryParameters['state'] ?? '';
 
           String userEmail = 'social_user@stylepulse.com';
           if (state.contains('naver') || uri.toString().contains('naver')) {
-            userEmail = 'naver_$code@naver.com';
+            userEmail = 'naver_member@naver.com';
           } else {
-            userEmail = 'kakao_$code@kakao.com';
+            userEmail = 'kakao_member@kakao.com';
           }
 
           await saveLoggedInUserEmail(userEmail);
@@ -157,11 +156,10 @@ class AuthService {
     return credential;
   }
 
-  // 💛 카카오 웹 & 모바일 소셜 로그인 (REST KEY: 97b4011bc63ddb77be006cdd8eae6814)
+  // 💛 카카오 웹 & 모바일 소셜 로그인
   Future<User?> signInWithKakao() async {
     try {
       if (kIsWeb) {
-        // 🌐 웹 환경: 카카오 REST API 키로 공식 계정 선택/로그인 팝업창 연동
         try {
           const kakaoClientId = '97b4011bc63ddb77be006cdd8eae6814';
           final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
@@ -175,7 +173,7 @@ class AuthService {
           debugPrint('카카오 팝업 연동 예외: $e');
         }
 
-        String kakaoEmail = 'kakao_user@kakao.com';
+        String kakaoEmail = 'kakao_member@kakao.com';
         String dummyUid = 'kakao_web_user';
 
         try {
@@ -186,7 +184,7 @@ class AuthService {
             UserModel newUser = UserModel(
               uid: dummyUid,
               email: kakaoEmail,
-              name: '카카오회원',
+              name: '카카오 회원',
               gender: '선택안함',
             );
             await userDocRef.set(newUser.toMap());
@@ -223,7 +221,7 @@ class AuthService {
 
       kakao.User kakaoUser = await kakao.UserApi.instance.me();
       String kakaoEmail = kakaoUser.kakaoAccount?.email ?? '${kakaoUser.id}@kakao.com';
-      String kakaoNickname = kakaoUser.kakaoAccount?.profile?.nickname ?? '카카오회원';
+      String kakaoNickname = kakaoUser.kakaoAccount?.profile?.nickname ?? '카카오 회원';
 
       String dummyUid = 'kakao_${kakaoUser.id}';
 
@@ -281,7 +279,7 @@ class AuthService {
                 email: (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
                     ? firebaseUser.email!
                     : '${firebaseUser.uid}@google.com',
-                name: firebaseUser.displayName ?? '구글회원',
+                name: firebaseUser.displayName ?? '구글 회원',
                 gender: '선택안함',
               );
 
@@ -328,7 +326,7 @@ class AuthService {
               email: (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
                   ? firebaseUser.email!
                   : '${firebaseUser.uid}@google.com',
-              name: firebaseUser.displayName ?? '구글회원',
+              name: firebaseUser.displayName ?? '구글 회원',
               gender: '선택안함',
             );
 
@@ -363,11 +361,10 @@ class AuthService {
     }
   }
 
-  // 💚 네이버 웹 & 모바일 소셜 로그인 (Client ID: BzaebjNVvZntEFUervTF)
+  // 💚 네이버 웹 & 모바일 소셜 로그인
   Future<User?> signInWithNaver() async {
     try {
       if (kIsWeb) {
-        // 🌐 웹 환경: 네이버 공식 Client ID (BzaebjNVvZntEFUervTF) 팝업창 연동
         try {
           const naverClientId = 'BzaebjNVvZntEFUervTF';
           final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
@@ -381,7 +378,7 @@ class AuthService {
           debugPrint('네이버 팝업 연동 예외: $e');
         }
 
-        String naverEmail = 'naver_user@naver.com';
+        String naverEmail = 'naver_member@naver.com';
         String dummyUid = 'naver_web_user';
 
         try {
@@ -392,7 +389,7 @@ class AuthService {
             UserModel newUser = UserModel(
               uid: dummyUid,
               email: naverEmail,
-              name: '네이버회원',
+              name: '네이버 회원',
               gender: '선택안함',
             );
             await userDocRef.set(newUser.toMap());
@@ -417,7 +414,7 @@ class AuthService {
         final account = res.account;
         String naverId = account?.id ?? '';
         String naverEmail = account?.email ?? '$naverId@naver.com';
-        String naverName = account?.name ?? account?.nickname ?? '네이버회원';
+        String naverName = account?.name ?? account?.nickname ?? '네이버 회원';
         String naverGender = account?.gender ?? '선택안함';
 
         String dummyUid = 'naver_$naverId';
