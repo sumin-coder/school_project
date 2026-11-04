@@ -157,13 +157,13 @@ class AuthService {
     return credential;
   }
 
-  // 💛 카카오 웹 & 모바일 소셜 로그인
+  // 💛 카카오 웹 & 모바일 소셜 로그인 (REST KEY: 97b4011bc63ddb77be006cdd8eae6814)
   Future<User?> signInWithKakao() async {
     try {
       if (kIsWeb) {
-        // 🌐 웹 환경: 공식 카카오 로그인 팝업창 실행 및 안심 로그인 처리
+        // 🌐 웹 환경: 카카오 REST API 키로 공식 계정 선택/로그인 팝업창 연동
         try {
-          const kakaoClientId = 'b881d4cf44b318b10abb56ab639f234c';
+          const kakaoClientId = '97b4011bc63ddb77be006cdd8eae6814';
           final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
           final authUrl = 'https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=$kakaoClientId&redirect_uri=$redirectUri&state=kakao_auth';
 
@@ -363,13 +363,13 @@ class AuthService {
     }
   }
 
-  // 💚 네이버 웹 & 모바일 소셜 로그인
+  // 💚 네이버 웹 & 모바일 소셜 로그인 (Client ID: BzaebjNVvZntEFUervTF)
   Future<User?> signInWithNaver() async {
     try {
       if (kIsWeb) {
-        // 🌐 웹 환경: 공식 네이버 로그인 팝업창 실행 및 안심 로그인 처리
+        // 🌐 웹 환경: 네이버 공식 Client ID (BzaebjNVvZntEFUervTF) 팝업창 연동
         try {
-          const naverClientId = 'C2_yT0r_6G';
+          const naverClientId = 'BzaebjNVvZntEFUervTF';
           final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
           final authUrl = 'https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=$naverClientId&redirect_uri=$redirectUri&state=naver_auth';
 

@@ -107073,7 +107073,7 @@ var $async$pq=A.r(function(a5,a6){if(a5===1){o.push(a6)
 s=p}for(;;)switch(s){case 0:p=4
 p=8
 m=A.qI(2,A.qd().guu()+A.qd().gds(),B.Z,!1)
-l="https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=b881d4cf44b318b10abb56ab639f234c&redirect_uri="+A.j(m)+"&state=kakao_auth"
+l="https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=97b4011bc63ddb77be006cdd8eae6814&redirect_uri="+A.j(m)+"&state=kakao_auth"
 s=11
 return A.l(A.aMZ(A.es(l,0,null),"_blank"),$async$pq)
 case 11:p=4
@@ -107219,7 +107219,7 @@ var $async$pr=A.r(function(a5,a6){if(a5===1){o.push(a6)
 s=p}for(;;)switch(s){case 0:p=4
 p=8
 m=A.qI(2,A.qd().guu()+A.qd().gds(),B.Z,!1)
-l="https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=C2_yT0r_6G&redirect_uri="+A.j(m)+"&state=naver_auth"
+l="https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=BzaebjNVvZntEFUervTF&redirect_uri="+A.j(m)+"&state=naver_auth"
 s=11
 return A.l(A.aMZ(A.es(l,0,null),"_blank"),$async$pr)
 case 11:p=4
