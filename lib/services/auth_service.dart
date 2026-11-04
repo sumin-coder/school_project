@@ -86,7 +86,7 @@ class AuthService {
               userEmail = 'kakao_$code@kakao.com';
               userName = '카카오회원';
             }
-          } else {
+          } else if (state.contains('naver') || uri.toString().contains('naver')) {
             // 💚 네이버 OAuth 2.0 인가 코드로 실제 사용자 프로필 교환
             try {
               const naverClientId = 'BzaebjNVvZntEFUervTF';
@@ -123,21 +123,28 @@ class AuthService {
           }
 
           // 💾 Firestore에 실제 수신된 소셜 계정 정보 저장
-          try {
-            final uid = userEmail.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
-            final userDocRef = FirebaseFirestore.instance.collection('users').doc(uid);
-            await userDocRef.set({
-              'uid': uid,
-              'email': userEmail,
-              'name': userName.isNotEmpty ? userName : userEmail.split('@').first,
-              'gender': '선택안함',
-            }, SetOptions(merge: true));
-          } catch (e) {
-            debugPrint('Firestore 소셜 프로필 저장 오류: $e');
-          }
+          if (userEmail.isNotEmpty) {
+            try {
+              final uid = userEmail.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+              final userDocRef = FirebaseFirestore.instance.collection('users').doc(uid);
+              await userDocRef.set({
+                'uid': uid,
+                'email': userEmail,
+                'name': userName.isNotEmpty ? userName : userEmail.split('@').first,
+                'gender': '선택안함',
+              }, SetOptions(merge: true));
 
-          await saveLoggedInUserEmail(userEmail);
-          return userEmail;
+              await saveLoggedInUserEmail(userEmail);
+
+              // Firebase Auth 세션이 없다면 익명 로그인으로 앱 상태 동기화
+              if (FirebaseAuth.instance.currentUser == null) {
+                await FirebaseAuth.instance.signInAnonymously();
+              }
+            } catch (e) {
+              debugPrint('Firestore 소셜 프로필 저장 오류: $e');
+            }
+            return userEmail;
+          }
         }
       }
 
@@ -168,7 +175,7 @@ class AuthService {
     }
   }
 
-  /// 🔍 아이디 중복 확인 (Firestore users 컬렉션에서 해당 아이디 존재 여부 확인)
+  /// 🔍 아이디 중복 확인
   Future<bool> checkIdAvailability(String id) async {
     final cleanId = id.trim();
     if (cleanId.isEmpty) return false;
@@ -185,31 +192,32 @@ class AuthService {
           .limit(1)
           .get();
 
-      return querySnapshot.docs.isEmpty; // empty면 사용 가능 (true)
+      return querySnapshot.docs.isEmpty;
     } catch (e) {
       debugPrint('아이디 중복 확인 오류: $e');
       return true;
     }
   }
 
-  // 이메일 또는 아이디로 로그인
+  // 이메일 로그인
   Future<UserCredential?> signInWithEmail({
     required String email,
     required String password,
   }) async {
     String identifier = email.trim();
-
     if (!identifier.contains('@')) {
       identifier = '$identifier@stylepulse.com';
     }
 
-    return await _auth.signInWithEmailAndPassword(
+    final credential = await _auth.signInWithEmailAndPassword(
       email: identifier,
       password: password,
     );
+    await saveLoggedInUserEmail(identifier);
+    return credential;
   }
 
-  // 이메일 또는 아이디로 회원가입 및 Firestore 사용자 생성
+  // 이메일 회원가입
   Future<UserCredential?> signUpWithEmail({
     required String email,
     required String password,
@@ -217,7 +225,6 @@ class AuthService {
     required String gender,
   }) async {
     String identifier = email.trim();
-
     if (!identifier.contains('@')) {
       identifier = '$identifier@stylepulse.com';
     }
@@ -243,16 +250,16 @@ class AuthService {
       } catch (e) {
         debugPrint('Firestore 유저 생성 예외: $e');
       }
+      await saveLoggedInUserEmail(identifier);
     }
 
     return credential;
   }
 
-  // 💛 카카오 실제 소셜 로그인 (REST KEY: 97b4011bc63ddb77be006cdd8eae6814)
+  // 💛 카카오 소셜 로그인 (Web & Mobile 통합)
   Future<User?> signInWithKakao() async {
     try {
       if (kIsWeb) {
-        // 🌐 웹 환경: 카카오 REST API 키로 공식 계정 선택/로그인 팝업창 연동
         const kakaoClientId = '97b4011bc63ddb77be006cdd8eae6814';
         final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
         final authUrl = 'https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=$kakaoClientId&redirect_uri=$redirectUri&state=kakao_auth';
@@ -265,26 +272,22 @@ class AuthService {
       }
 
       // 📱 모바일 환경 (Android / iOS)
-      kakao.OAuthToken token;
       bool isInstalled = await kakao.isKakaoTalkInstalled();
       if (isInstalled) {
         try {
-          token = await kakao.UserApi.instance.loginWithKakaoTalk();
+          await kakao.UserApi.instance.loginWithKakaoTalk();
         } catch (error) {
           debugPrint('카카오톡으로 로그인 실패: $error');
           if (error.toString().contains('CANCELED')) return null;
-          token = await kakao.UserApi.instance.loginWithKakaoAccount();
+          await kakao.UserApi.instance.loginWithKakaoAccount();
         }
       } else {
-        token = await kakao.UserApi.instance.loginWithKakaoAccount();
+        await kakao.UserApi.instance.loginWithKakaoAccount();
       }
-
-      debugPrint('카카오 토큰 발급 성공: ${token.accessToken}');
 
       kakao.User kakaoUser = await kakao.UserApi.instance.me();
       String kakaoEmail = kakaoUser.kakaoAccount?.email ?? '${kakaoUser.id}@kakao.com';
       String kakaoNickname = kakaoUser.kakaoAccount?.profile?.nickname ?? '카카오회원';
-
       String dummyUid = 'kakao_${kakaoUser.id}';
 
       try {
@@ -298,12 +301,13 @@ class AuthService {
             name: kakaoNickname,
             gender: '선택안함',
           );
-
           await userDocRef.set(newUser.toMap());
         }
       } catch (e) {
         debugPrint('Firestore 카카오 유저 연동 예외: $e');
       }
+
+      await saveLoggedInUserEmail(kakaoEmail);
 
       User? firebaseUser = _auth.currentUser;
       if (firebaseUser == null) {
@@ -318,11 +322,10 @@ class AuthService {
     }
   }
 
-  // 🌐 구글 로그인 메서드 (Web: signInWithPopup, Mobile: GoogleSignIn)
+  // 🌐 구글 로그인 메서드
   Future<User?> signInWithGoogle() async {
     try {
       if (kIsWeb) {
-        // 🌐 웹 환경: Firebase Auth 팝업 로그인
         final GoogleAuthProvider googleProvider = GoogleAuthProvider();
         googleProvider.addScope('email');
         googleProvider.addScope('profile');
@@ -331,6 +334,9 @@ class AuthService {
         final User? firebaseUser = userCredential.user;
 
         if (firebaseUser != null) {
+          if (firebaseUser.email != null) {
+            await saveLoggedInUserEmail(firebaseUser.email!);
+          }
           try {
             final userDocRef = _firestore.collection('users').doc(firebaseUser.uid);
             final docSnapshot = await userDocRef.get();
@@ -338,24 +344,19 @@ class AuthService {
             if (!docSnapshot.exists) {
               UserModel newUser = UserModel(
                 uid: firebaseUser.uid,
-                email: (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
-                    ? firebaseUser.email!
-                    : '${firebaseUser.uid}@google.com',
+                email: firebaseUser.email ?? '${firebaseUser.uid}@google.com',
                 name: firebaseUser.displayName ?? '구글회원',
                 gender: '선택안함',
               );
-
               await userDocRef.set(newUser.toMap());
             }
           } catch (e) {
-            debugPrint('Firestore 구글 유저 정보 연동 예외 (보안규칙 등): $e');
+            debugPrint('Firestore 구글 유저 정보 연동 예외: $e');
           }
         }
-
         return firebaseUser;
       }
 
-      // 📱 모바일 환경
       try {
         await GoogleSignIn.instance.initialize();
       } catch (e) {
@@ -363,7 +364,6 @@ class AuthService {
       }
 
       final GoogleSignInAccount googleUser = await GoogleSignIn.instance.authenticate();
-
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
       if (googleAuth.idToken == null) {
@@ -378,6 +378,9 @@ class AuthService {
       User? firebaseUser = userCredential.user;
 
       if (firebaseUser != null) {
+        if (firebaseUser.email != null) {
+          await saveLoggedInUserEmail(firebaseUser.email!);
+        }
         try {
           final userDocRef = _firestore.collection('users').doc(firebaseUser.uid);
           final docSnapshot = await userDocRef.get();
@@ -385,13 +388,10 @@ class AuthService {
           if (!docSnapshot.exists) {
             UserModel newUser = UserModel(
               uid: firebaseUser.uid,
-              email: (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
-                  ? firebaseUser.email!
-                  : '${firebaseUser.uid}@google.com',
+              email: firebaseUser.email ?? '${firebaseUser.uid}@google.com',
               name: firebaseUser.displayName ?? '구글회원',
               gender: '선택안함',
             );
-
             await userDocRef.set(newUser.toMap());
           }
         } catch (e) {
@@ -400,20 +400,6 @@ class AuthService {
       }
 
       return firebaseUser;
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'popup-closed-by-user' || e.code == 'cancelled' || e.code == 'user-cancelled') {
-        debugPrint('사용자가 구글 로그인 팝업을 닫았습니다.');
-        return null;
-      }
-      debugPrint('Firebase 구글 로그인 오류 (${e.code}): ${e.message}');
-      rethrow;
-    } on GoogleSignInException catch (e) {
-      if (e.code == 'canceled' || e.code == GoogleSignInExceptionCode.canceled) {
-        debugPrint('사용자가 구글 로그인을 취소했습니다.');
-        return null;
-      }
-      debugPrint('구글 로그인 오류 (GoogleSignInException): $e');
-      rethrow;
     } catch (e) {
       if (e.toString().contains('cancelled') || e.toString().contains('popup-closed-by-user')) {
         return null;
@@ -423,54 +409,22 @@ class AuthService {
     }
   }
 
-  // 💚 네이버 웹 & 모바일 소셜 로그인 (Client ID: BzaebjNVvZntEFUervTF)
+  // 💚 네이버 소셜 로그인 (Web & Mobile 통합)
   Future<User?> signInWithNaver() async {
     try {
       if (kIsWeb) {
-        // 🌐 웹 환경: 네이버 공식 Client ID (BzaebjNVvZntEFUervTF) 팝업창 연동
-        try {
-          const naverClientId = 'BzaebjNVvZntEFUervTF';
-          final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
-          final authUrl = 'https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=$naverClientId&redirect_uri=$redirectUri&state=naver_auth';
+        const naverClientId = 'BzaebjNVvZntEFUervTF';
+        final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
+        final authUrl = 'https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=$naverClientId&redirect_uri=$redirectUri&state=naver_auth';
 
-          await launchUrl(
-            Uri.parse(authUrl),
-            webOnlyWindowName: '_self',
-          );
-        } catch (e) {
-          debugPrint('네이버 팝업 연동 예외: $e');
-        }
-
-        String naverEmail = 'naver_user@naver.com';
-        String dummyUid = 'naver_web_user';
-
-        try {
-          final userDocRef = _firestore.collection('users').doc(dummyUid);
-          final docSnapshot = await userDocRef.get();
-
-          if (!docSnapshot.exists) {
-            UserModel newUser = UserModel(
-              uid: dummyUid,
-              email: naverEmail,
-              name: '네이버회원',
-              gender: '선택안함',
-            );
-            await userDocRef.set(newUser.toMap());
-          }
-        } catch (e) {
-          debugPrint('Firestore 네이버 유저 연동 예외: $e');
-        }
-
-        User? firebaseUser = _auth.currentUser;
-        if (firebaseUser == null) {
-          UserCredential userCredential = await _auth.signInAnonymously();
-          firebaseUser = userCredential.user;
-        }
-
-        return firebaseUser;
+        await launchUrl(
+          Uri.parse(authUrl),
+          webOnlyWindowName: '_self',
+        );
+        return null;
       }
 
-      // 📱 모바일 환경
+      // 📱 모바일 환경 (Android / iOS)
       final NaverLoginResult res = await FlutterNaverLogin.logIn();
 
       if (res.status == NaverLoginStatus.loggedIn) {
@@ -493,12 +447,13 @@ class AuthService {
               name: naverName,
               gender: naverGender,
             );
-
             await userDocRef.set(newUser.toMap());
           }
         } catch (e) {
           debugPrint('Firestore 네이버 유저 연동 예외: $e');
         }
+
+        await saveLoggedInUserEmail(naverEmail);
 
         User? firebaseUser = _auth.currentUser;
         if (firebaseUser == null) {
