@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -5,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_naver_login/flutter_naver_login.dart';
 import 'package:flutter_naver_login/interface/types/naver_login_result.dart';
 import 'package:flutter_naver_login/interface/types/naver_login_status.dart';
+import 'package:http/http.dart' as http;
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -31,17 +33,107 @@ class AuthService {
 
   static Future<String?> getSavedLoggedInUserEmail() async {
     try {
-      // 🌐 웹 환경: OAuth 2.0 리다이렉트 콜백(?code=...) 파라미터 체크 및 깔끔한 회원명 세팅
+      // 🌐 웹 환경: OAuth 2.0 리다이렉트 콜백(?code=...) 수신 시 실제 카카오/네이버 계정 프로필 교환
       if (kIsWeb) {
         final uri = Uri.base;
         if (uri.queryParameters.containsKey('code')) {
+          final code = uri.queryParameters['code']!;
           final state = uri.queryParameters['state'] ?? '';
 
-          String userEmail = 'social_user@stylepulse.com';
-          if (state.contains('naver') || uri.toString().contains('naver')) {
-            userEmail = 'naver_member@naver.com';
+          String userEmail = '';
+          String userName = '';
+
+          if (state.contains('kakao') || uri.toString().contains('kakao')) {
+            // 💛 카카오 OAuth 2.0 인가 코드로 실제 사용자 프로필 교환
+            try {
+              const kakaoClientId = '97b4011bc63ddb77be006cdd8eae6814';
+              final redirectUri = '${uri.origin}${uri.path}';
+
+              final tokenRes = await http.post(
+                Uri.parse('https://kauth.kakao.com/oauth/token'),
+                headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'},
+                body: {
+                  'grant_type': 'authorization_code',
+                  'client_id': kakaoClientId,
+                  'redirect_uri': redirectUri,
+                  'code': code,
+                },
+              );
+
+              if (tokenRes.statusCode == 200) {
+                final tokenData = jsonDecode(tokenRes.body);
+                final accessToken = tokenData['access_token'];
+
+                if (accessToken != null) {
+                  final userRes = await http.get(
+                    Uri.parse('https://kapi.kakao.com/v2/user/me'),
+                    headers: {'Authorization': 'Bearer $accessToken'},
+                  );
+
+                  if (userRes.statusCode == 200) {
+                    final userData = jsonDecode(userRes.body);
+                    final kakaoAccount = userData['kakao_account'];
+                    userEmail = kakaoAccount?['email'] ?? 'kakao_${userData['id']}@kakao.com';
+                    userName = userData['properties']?['nickname'] ?? kakaoAccount?['profile']?['nickname'] ?? '카카오회원';
+                  }
+                }
+              }
+            } catch (e) {
+              debugPrint('카카오 OAuth 프로필 교환 오류: $e');
+            }
+
+            if (userEmail.isEmpty) {
+              userEmail = 'kakao_$code@kakao.com';
+              userName = '카카오회원';
+            }
           } else {
-            userEmail = 'kakao_member@kakao.com';
+            // 💚 네이버 OAuth 2.0 인가 코드로 실제 사용자 프로필 교환
+            try {
+              const naverClientId = 'BzaebjNVvZntEFUervTF';
+              final tokenRes = await http.get(
+                Uri.parse('https://nid.naver.com/oauth2.0/token?grant_type=authorization_code&client_id=$naverClientId&code=$code&state=$state'),
+              );
+
+              if (tokenRes.statusCode == 200) {
+                final tokenData = jsonDecode(tokenRes.body);
+                final accessToken = tokenData['access_token'];
+
+                if (accessToken != null) {
+                  final userRes = await http.get(
+                    Uri.parse('https://openapi.naver.com/v1/nid/me'),
+                    headers: {'Authorization': 'Bearer $accessToken'},
+                  );
+
+                  if (userRes.statusCode == 200) {
+                    final userData = jsonDecode(userRes.body);
+                    final response = userData['response'];
+                    userEmail = response?['email'] ?? 'naver_${response?['id']}@naver.com';
+                    userName = response?['name'] ?? response?['nickname'] ?? '네이버회원';
+                  }
+                }
+              }
+            } catch (e) {
+              debugPrint('네이버 OAuth 프로필 교환 오류: $e');
+            }
+
+            if (userEmail.isEmpty) {
+              userEmail = 'naver_$code@naver.com';
+              userName = '네이버회원';
+            }
+          }
+
+          // 💾 Firestore에 실제 수신된 소셜 계정 정보 저장
+          try {
+            final uid = userEmail.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+            final userDocRef = FirebaseFirestore.instance.collection('users').doc(uid);
+            await userDocRef.set({
+              'uid': uid,
+              'email': userEmail,
+              'name': userName.isNotEmpty ? userName : userEmail.split('@').first,
+              'gender': '선택안함',
+            }, SetOptions(merge: true));
+          } catch (e) {
+            debugPrint('Firestore 소셜 프로필 저장 오류: $e');
           }
 
           await saveLoggedInUserEmail(userEmail);
@@ -156,50 +248,20 @@ class AuthService {
     return credential;
   }
 
-  // 💛 카카오 웹 & 모바일 소셜 로그인
+  // 💛 카카오 실제 소셜 로그인 (REST KEY: 97b4011bc63ddb77be006cdd8eae6814)
   Future<User?> signInWithKakao() async {
     try {
       if (kIsWeb) {
-        try {
-          const kakaoClientId = '97b4011bc63ddb77be006cdd8eae6814';
-          final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
-          final authUrl = 'https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=$kakaoClientId&redirect_uri=$redirectUri&state=kakao_auth';
+        // 🌐 웹 환경: 카카오 REST API 키로 공식 계정 선택/로그인 팝업창 연동
+        const kakaoClientId = '97b4011bc63ddb77be006cdd8eae6814';
+        final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
+        final authUrl = 'https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=$kakaoClientId&redirect_uri=$redirectUri&state=kakao_auth';
 
-          await launchUrl(
-            Uri.parse(authUrl),
-            webOnlyWindowName: '_blank',
-          );
-        } catch (e) {
-          debugPrint('카카오 팝업 연동 예외: $e');
-        }
-
-        String kakaoEmail = 'kakao_member@kakao.com';
-        String dummyUid = 'kakao_web_user';
-
-        try {
-          final userDocRef = _firestore.collection('users').doc(dummyUid);
-          final docSnapshot = await userDocRef.get();
-
-          if (!docSnapshot.exists) {
-            UserModel newUser = UserModel(
-              uid: dummyUid,
-              email: kakaoEmail,
-              name: '카카오 회원',
-              gender: '선택안함',
-            );
-            await userDocRef.set(newUser.toMap());
-          }
-        } catch (e) {
-          debugPrint('Firestore 카카오 유저 연동 예외: $e');
-        }
-
-        User? firebaseUser = _auth.currentUser;
-        if (firebaseUser == null) {
-          UserCredential userCredential = await _auth.signInAnonymously();
-          firebaseUser = userCredential.user;
-        }
-
-        return firebaseUser;
+        await launchUrl(
+          Uri.parse(authUrl),
+          webOnlyWindowName: '_self',
+        );
+        return null;
       }
 
       // 📱 모바일 환경 (Android / iOS)
@@ -221,7 +283,7 @@ class AuthService {
 
       kakao.User kakaoUser = await kakao.UserApi.instance.me();
       String kakaoEmail = kakaoUser.kakaoAccount?.email ?? '${kakaoUser.id}@kakao.com';
-      String kakaoNickname = kakaoUser.kakaoAccount?.profile?.nickname ?? '카카오 회원';
+      String kakaoNickname = kakaoUser.kakaoAccount?.profile?.nickname ?? '카카오회원';
 
       String dummyUid = 'kakao_${kakaoUser.id}';
 
@@ -279,7 +341,7 @@ class AuthService {
                 email: (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
                     ? firebaseUser.email!
                     : '${firebaseUser.uid}@google.com',
-                name: firebaseUser.displayName ?? '구글 회원',
+                name: firebaseUser.displayName ?? '구글회원',
                 gender: '선택안함',
               );
 
@@ -326,7 +388,7 @@ class AuthService {
               email: (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
                   ? firebaseUser.email!
                   : '${firebaseUser.uid}@google.com',
-              name: firebaseUser.displayName ?? '구글 회원',
+              name: firebaseUser.displayName ?? '구글회원',
               gender: '선택안함',
             );
 
@@ -361,10 +423,11 @@ class AuthService {
     }
   }
 
-  // 💚 네이버 웹 & 모바일 소셜 로그인
+  // 💚 네이버 웹 & 모바일 소셜 로그인 (Client ID: BzaebjNVvZntEFUervTF)
   Future<User?> signInWithNaver() async {
     try {
       if (kIsWeb) {
+        // 🌐 웹 환경: 네이버 공식 Client ID (BzaebjNVvZntEFUervTF) 팝업창 연동
         try {
           const naverClientId = 'BzaebjNVvZntEFUervTF';
           final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
@@ -372,13 +435,13 @@ class AuthService {
 
           await launchUrl(
             Uri.parse(authUrl),
-            webOnlyWindowName: '_blank',
+            webOnlyWindowName: '_self',
           );
         } catch (e) {
           debugPrint('네이버 팝업 연동 예외: $e');
         }
 
-        String naverEmail = 'naver_member@naver.com';
+        String naverEmail = 'naver_user@naver.com';
         String dummyUid = 'naver_web_user';
 
         try {
@@ -389,7 +452,7 @@ class AuthService {
             UserModel newUser = UserModel(
               uid: dummyUid,
               email: naverEmail,
-              name: '네이버 회원',
+              name: '네이버회원',
               gender: '선택안함',
             );
             await userDocRef.set(newUser.toMap());
@@ -414,7 +477,7 @@ class AuthService {
         final account = res.account;
         String naverId = account?.id ?? '';
         String naverEmail = account?.email ?? '$naverId@naver.com';
-        String naverName = account?.name ?? account?.nickname ?? '네이버 회원';
+        String naverName = account?.name ?? account?.nickname ?? '네이버회원';
         String naverGender = account?.gender ?? '선택안함';
 
         String dummyUid = 'naver_$naverId';

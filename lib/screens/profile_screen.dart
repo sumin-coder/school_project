@@ -39,13 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     _userEmail = widget.userEmail;
 
-    if (_userEmail.startsWith('kakao_') || _userEmail.contains('kakao')) {
-      _userName = '카카오 회원';
-      _userEmail = 'kakao_member@kakao.com';
-    } else if (_userEmail.startsWith('naver_') || _userEmail.contains('naver')) {
-      _userName = '네이버 회원';
-      _userEmail = 'naver_member@naver.com';
-    } else if (_userEmail.contains('@')) {
+    if (_userEmail.contains('@')) {
       _userName = _userEmail.split('@').first;
     } else {
       _userName = '회원';
@@ -66,14 +60,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     try {
-      if (currentUser != null) {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
-        if (doc.exists && doc.data()?['name'] != null && doc.data()!['name'].toString().isNotEmpty) {
-          if (mounted) {
-            setState(() {
-              _userName = doc.data()!['name'];
-            });
-          }
+      final uid = widget.userEmail.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        if (mounted) {
+          setState(() {
+            if (data['name'] != null && data['name'].toString().isNotEmpty) {
+              _userName = data['name'];
+            }
+            if (data['email'] != null && data['email'].toString().isNotEmpty) {
+              _userEmail = data['email'];
+            }
+          });
         }
       }
     } catch (e) {
