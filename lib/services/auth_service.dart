@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../models/user_model.dart';
 
 class AuthService {
@@ -36,6 +38,9 @@ class AuthService {
     try {
       if (kIsWeb) {
         final uri = Uri.base;
+        final isOAuthCallback =
+            uri.queryParameters.containsKey('code') ||
+            uri.queryParameters.containsKey('error');
         if (uri.queryParameters.containsKey('code')) {
           final code = uri.queryParameters['code']!;
           final state = uri.queryParameters['state'] ?? '';
@@ -53,7 +58,10 @@ class AuthService {
               // 인가 코드로 Access Token 요청
               final tokenRes = await http.post(
                 Uri.parse('https://kauth.kakao.com/oauth/token'),
-                headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'},
+                headers: {
+                  'Content-Type':
+                      'application/x-www-form-urlencoded;charset=utf-8',
+                },
                 body: {
                   'grant_type': 'authorization_code',
                   'client_id': kakaoClientId,
@@ -76,8 +84,13 @@ class AuthService {
                   if (userRes.statusCode == 200) {
                     final userData = jsonDecode(userRes.body);
                     final kakaoAccount = userData['kakao_account'];
-                    userEmail = kakaoAccount?['email'] ?? 'kakao_${userData['id']}@kakao.com';
-                    userName = userData['properties']?['nickname'] ?? kakaoAccount?['profile']?['nickname'] ?? '카카오회원';
+                    userEmail =
+                        kakaoAccount?['email'] ??
+                        'kakao_${userData['id']}@kakao.com';
+                    userName =
+                        userData['properties']?['nickname'] ??
+                        kakaoAccount?['profile']?['nickname'] ??
+                        '카카오회원';
                   }
                 }
               }
@@ -86,14 +99,17 @@ class AuthService {
             }
           }
           // 2. 네이버 웹 로그인 콜백 처리
-          else if (state.contains('naver') || uri.toString().contains('naver')) {
+          else if (state.contains('naver') ||
+              uri.toString().contains('naver')) {
             try {
               const naverClientId = 'BzaebjNVvZntEFUervTF';
               // 주의: 네이버는 웹에서 클라이언트 시크릿(Client Secret)이 노출될 수 있으므로,
               // 정석은 백엔드 서버를 거쳐야 하지만, 프론트에서 단독 처리 시 클라이언트 시크릿이 필요할 수 있습니다.
               // 아래는 인가 코드를 받아 프로필을 조회하는 흐름입니다.
               final tokenRes = await http.get(
-                Uri.parse('https://nid.naver.com/oauth2.0/token?grant_type=authorization_code&client_id=$naverClientId&code=$code&state=$state'),
+                Uri.parse(
+                  'https://nid.naver.com/oauth2.0/token?grant_type=authorization_code&client_id=$naverClientId&code=$code&state=$state',
+                ),
               );
 
               if (tokenRes.statusCode == 200) {
@@ -109,8 +125,11 @@ class AuthService {
                   if (userRes.statusCode == 200) {
                     final userData = jsonDecode(userRes.body);
                     final response = userData['response'];
-                    userEmail = response?['email'] ?? 'naver_${response?['id']}@naver.com';
-                    userName = response?['name'] ?? response?['nickname'] ?? '네이버회원';
+                    userEmail =
+                        response?['email'] ??
+                        'naver_${response?['id']}@naver.com';
+                    userName =
+                        response?['name'] ?? response?['nickname'] ?? '네이버회원';
                   }
                 }
               }
@@ -123,11 +142,15 @@ class AuthService {
           if (userEmail.isNotEmpty) {
             try {
               final uid = userEmail.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
-              final userDocRef = FirebaseFirestore.instance.collection('users').doc(uid);
+              final userDocRef = FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(uid);
               await userDocRef.set({
                 'uid': uid,
                 'email': userEmail,
-                'name': userName.isNotEmpty ? userName : userEmail.split('@').first,
+                'name': userName.isNotEmpty
+                    ? userName
+                    : userEmail.split('@').first,
                 'gender': '선택안함',
               }, SetOptions(merge: true));
 
@@ -142,6 +165,9 @@ class AuthService {
             return userEmail;
           }
         }
+
+        // OAuth 콜백이 실패한 경우 이전 세션으로 로그인된 것처럼 처리하지 않습니다.
+        if (isOAuthCallback) return null;
       }
 
       final prefs = await SharedPreferences.getInstance();
@@ -257,9 +283,12 @@ class AuthService {
     try {
       if (kIsWeb) {
         const kakaoClientId = '97b4011bc63ddb77be006cdd8eae6814';
-        final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
+        final redirectUri = Uri.encodeComponent(
+          '${Uri.base.origin}${Uri.base.path}',
+        );
         // state에 kakao_auth 명시하여 리다이렉트 시 카카오 로그인임을 판별
-        final authUrl = 'https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=$kakaoClientId&redirect_uri=$redirectUri&state=kakao_auth';
+        final authUrl =
+            'https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=$kakaoClientId&redirect_uri=$redirectUri&state=kakao_auth';
 
         await launchUrl(
           Uri.parse(authUrl),
@@ -283,8 +312,10 @@ class AuthService {
       }
 
       kakao.User kakaoUser = await kakao.UserApi.instance.me();
-      String kakaoEmail = kakaoUser.kakaoAccount?.email ?? '${kakaoUser.id}@kakao.com';
-      String kakaoNickname = kakaoUser.kakaoAccount?.profile?.nickname ?? '카카오회원';
+      String kakaoEmail =
+          kakaoUser.kakaoAccount?.email ?? '${kakaoUser.id}@kakao.com';
+      String kakaoNickname =
+          kakaoUser.kakaoAccount?.profile?.nickname ?? '카카오회원';
       String dummyUid = 'kakao_${kakaoUser.id}';
 
       try {
@@ -327,18 +358,23 @@ class AuthService {
         googleProvider.addScope('email');
         googleProvider.addScope('profile');
 
-        final UserCredential userCredential = await _auth.signInWithPopup(googleProvider);
+        final UserCredential userCredential = await _auth.signInWithPopup(
+          googleProvider,
+        );
         final User? firebaseUser = userCredential.user;
 
         if (firebaseUser != null) {
-          final userEmail = (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
+          final userEmail =
+              (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
               ? firebaseUser.email!
               : '${firebaseUser.uid}@google.com';
 
           await saveLoggedInUserEmail(userEmail);
 
           try {
-            final userDocRef = _firestore.collection('users').doc(firebaseUser.uid);
+            final userDocRef = _firestore
+                .collection('users')
+                .doc(firebaseUser.uid);
             final docSnapshot = await userDocRef.get();
 
             if (!docSnapshot.exists) {
@@ -363,7 +399,8 @@ class AuthService {
         debugPrint('GoogleSignIn 이미 초기화됨: $e');
       }
 
-      final GoogleSignInAccount googleUser = await GoogleSignIn.instance.authenticate();
+      final GoogleSignInAccount googleUser = await GoogleSignIn.instance
+          .authenticate();
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
       if (googleAuth.idToken == null) {
@@ -374,18 +411,23 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
 
-      UserCredential userCredential = await _auth.signInWithCredential(credential);
+      UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
       User? firebaseUser = userCredential.user;
 
       if (firebaseUser != null) {
-        final userEmail = (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
+        final userEmail =
+            (firebaseUser.email != null && firebaseUser.email!.isNotEmpty)
             ? firebaseUser.email!
             : '${firebaseUser.uid}@google.com';
 
         await saveLoggedInUserEmail(userEmail);
 
         try {
-          final userDocRef = _firestore.collection('users').doc(firebaseUser.uid);
+          final userDocRef = _firestore
+              .collection('users')
+              .doc(firebaseUser.uid);
           final docSnapshot = await userDocRef.get();
 
           if (!docSnapshot.exists) {
@@ -404,7 +446,8 @@ class AuthService {
 
       return firebaseUser;
     } catch (e) {
-      if (e.toString().contains('cancelled') || e.toString().contains('popup-closed-by-user')) {
+      if (e.toString().contains('cancelled') ||
+          e.toString().contains('popup-closed-by-user')) {
         return null;
       }
       debugPrint('구글 로그인 중 오류 발생: $e');
@@ -417,9 +460,12 @@ class AuthService {
     try {
       if (kIsWeb) {
         const naverClientId = 'BzaebjNVvZntEFUervTF';
-        final redirectUri = Uri.encodeComponent('${Uri.base.origin}${Uri.base.path}');
+        final redirectUri = Uri.encodeComponent(
+          '${Uri.base.origin}${Uri.base.path}',
+        );
         // state에 naver_auth 명시하여 리다이렉트 시 네이버 로그인임을 판별
-        final authUrl = 'https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=$naverClientId&redirect_uri=$redirectUri&state=naver_auth';
+        final authUrl =
+            'https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=$naverClientId&redirect_uri=$redirectUri&state=naver_auth';
 
         await launchUrl(
           Uri.parse(authUrl),
