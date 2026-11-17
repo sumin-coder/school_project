@@ -162,6 +162,10 @@ class AuthService {
             } catch (e) {
               debugPrint('웹 소셜 로그인 Firestore 저장 오류: $e');
             }
+            await launchUrl(
+              Uri.parse('${uri.origin}${uri.path}'),
+              webOnlyWindowName: '_self',
+            );
             return userEmail;
           }
         }
