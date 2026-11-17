@@ -87,6 +87,8 @@ async function getNaverProfile(code, state, redirectUri, env) {
     id: String(user.id),
     email: user.email || null,
     name: user.name || user.nickname || null,
+    nickname: user.nickname || null,
+    gender: user.gender || null,
   };
 }
 

@@ -106,37 +106,35 @@ class AuthService {
 
           final provider = isKakao ? 'kakao' : 'naver';
           Map<String, dynamic> profile = {};
-          if (isKakao && _oauthBaseUrl.isEmpty) {
-            await _saveOAuthError('카카오 프로필 서버가 설정되지 않았습니다.');
+          if (_oauthBaseUrl.isEmpty) {
+            await _saveOAuthError('$provider 프로필 서버가 설정되지 않았습니다.');
             return null;
           }
-          if (isKakao) {
-            late final http.Response response;
-            try {
-              response = await http.post(
-                Uri.parse('$_oauthBaseUrl/kakaoOAuth'),
-                headers: {'Content-Type': 'application/json'},
-                body: jsonEncode({
-                  'code': uri.queryParameters['code'],
-                  'state': state,
-                  'redirectUri': '${uri.origin}${uri.path}',
-                }),
-              );
-            } catch (e) {
-              debugPrint('Kakao profile request failed: $e');
-              await _saveOAuthError('카카오 프로필 서버에 연결할 수 없습니다.');
-              return null;
-            }
-            if (response.statusCode != 200) {
-              debugPrint('Kakao profile request failed: ${response.statusCode}');
-              await _saveOAuthError('카카오 계정 정보를 가져오지 못했습니다. 카카오 설정을 확인해 주세요.');
-              return null;
-            }
-            profile = jsonDecode(response.body) as Map<String, dynamic>;
-            if (profile['id'] == null) {
-              await _saveOAuthError('카카오 계정 정보를 확인할 수 없습니다.');
-              return null;
-            }
+          late final http.Response response;
+          try {
+            response = await http.post(
+              Uri.parse('$_oauthBaseUrl/${provider}OAuth'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'code': uri.queryParameters['code'],
+                'state': state,
+                'redirectUri': '${uri.origin}${uri.path}',
+              }),
+            );
+          } catch (e) {
+            debugPrint('$provider profile request failed: $e');
+            await _saveOAuthError('$provider 프로필 서버에 연결할 수 없습니다.');
+            return null;
+          }
+          if (response.statusCode != 200) {
+            debugPrint('$provider profile request failed: ${response.statusCode}');
+            await _saveOAuthError('$provider 계정 정보를 가져오지 못했습니다. 설정을 확인해 주세요.');
+            return null;
+          }
+          profile = jsonDecode(response.body) as Map<String, dynamic>;
+          if (profile['id'] == null) {
+            await _saveOAuthError('$provider 계정 정보를 확인할 수 없습니다.');
+            return null;
           }
           final firebaseUser =
               FirebaseAuth.instance.currentUser ??
@@ -147,11 +145,7 @@ class AuthService {
           }
 
           final providerId = profile['id']?.toString() ?? firebaseUser.uid;
-          final userEmail = isKakao
-              ? 'kakao_$providerId@stylepulse.com'
-              : profile['email']?.toString().trim().isNotEmpty == true
-              ? profile['email'].toString().trim()
-              : '${provider}_$providerId@stylepulse.com';
+          final userEmail = '${provider}_$providerId@stylepulse.com';
           final userName = profile['name']?.toString().trim().isNotEmpty == true
               ? profile['name'].toString().trim()
               : (isKakao ? '카카오 사용자' : '네이버 사용자');
@@ -163,7 +157,9 @@ class AuthService {
                   'uid': firebaseUser.uid,
                   'email': userEmail,
                   'name': userName,
-                  'gender': '선택안함',
+                  'providerEmail': profile['email'],
+                  'nickname': profile['nickname'],
+                  'gender': profile['gender'] ?? '선택안함',
                   'provider': provider,
                   'providerId': providerId,
                   'updatedAt': FieldValue.serverTimestamp(),
