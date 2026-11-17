@@ -147,7 +147,9 @@ class AuthService {
           }
 
           final providerId = profile['id']?.toString() ?? firebaseUser.uid;
-          final userEmail = profile['email']?.toString().trim().isNotEmpty == true
+          final userEmail = isKakao
+              ? 'kakao_$providerId@stylepulse.com'
+              : profile['email']?.toString().trim().isNotEmpty == true
               ? profile['email'].toString().trim()
               : '${provider}_$providerId@stylepulse.com';
           final userName = profile['name']?.toString().trim().isNotEmpty == true
