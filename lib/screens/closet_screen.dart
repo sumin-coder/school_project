@@ -204,32 +204,47 @@ class _ClosetScreenState extends State<ClosetScreen> {
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: filteredList.length,
-      itemBuilder: (context, index) {
-        final item = filteredList[index];
-        return ClothCard(
-          key: ValueKey(item.id),
-          item: item,
-          onDelete: () => ConfirmDeleteDialog.show(
-            context: context,
-            userEmail: widget.userEmail,
-            item: item,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final gridWidth = constraints.maxWidth < 1500
+            ? constraints.maxWidth
+            : 1500.0;
+        final crossAxisCount = (gridWidth / 250).floor().clamp(2, 6).toInt();
+        final isDesktop = constraints.maxWidth >= 600;
+
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1500),
+            child: GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                childAspectRatio: isDesktop ? 0.82 : 0.75,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              itemCount: filteredList.length,
+              itemBuilder: (context, index) {
+                final item = filteredList[index];
+                return ClothCard(
+                  key: ValueKey(item.id),
+                  item: item,
+                  onDelete: () => ConfirmDeleteDialog.show(
+                    context: context,
+                    userEmail: widget.userEmail,
+                    item: item,
+                  ),
+                  onFavoriteToggle: () async {
+                    await _closetService.toggleFavorite(
+                      userEmail: widget.userEmail,
+                      clothId: item.id,
+                      isFavorite: !item.isFavorite,
+                    );
+                  },
+                );
+              },
+            ),
           ),
-          onFavoriteToggle: () async {
-            await _closetService.toggleFavorite(
-              userEmail: widget.userEmail,
-              clothId: item.id,
-              isFavorite: !item.isFavorite,
-            );
-          },
         );
       },
     );
