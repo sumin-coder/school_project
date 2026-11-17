@@ -48,6 +48,7 @@ export default {
         : await getKakaoProfile(code, redirectUri, env);
       return json(profile, 200, corsHeaders);
     } catch (error) {
+      console.error("OAuth request failed:", error instanceof OAuthError ? error.code : "OAUTH_SERVICE_UNAVAILABLE");
       return json(
         {error: error instanceof OAuthError ? error.code : "OAUTH_SERVICE_UNAVAILABLE"},
         error instanceof OAuthError ? error.status : 502,
@@ -102,7 +103,9 @@ async function getKakaoProfile(code, redirectUri, env) {
     headers: {"Content-Type": "application/x-www-form-urlencoded;charset=utf-8"},
     body: tokenParams,
   }));
-  if (!token.access_token) throw new OAuthError("KAKAO_TOKEN_EXCHANGE_FAILED");
+  if (!token.access_token) {
+    throw new OAuthError(`KAKAO_TOKEN_EXCHANGE_FAILED_${token.error || "UNKNOWN"}`);
+  }
 
   const user = await readJson(await fetch("https://kapi.kakao.com/v2/user/me", {
     headers: {Authorization: `Bearer ${token.access_token}`},
@@ -118,7 +121,12 @@ async function getKakaoProfile(code, redirectUri, env) {
 
 async function readJson(response) {
   const result = await response.json();
-  if (!response.ok) throw new OAuthError("PROVIDER_REQUEST_FAILED");
+  if (!response.ok) {
+    const providerError = typeof result.error === "string"
+      ? result.error.toUpperCase()
+      : `HTTP_${response.status}`;
+    throw new OAuthError(`PROVIDER_REQUEST_FAILED_${providerError}`, response.status);
+  }
   return result;
 }
 
