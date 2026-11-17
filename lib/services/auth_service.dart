@@ -176,12 +176,6 @@ class AuthService {
         return savedEmail;
       }
 
-      final fbUser = FirebaseAuth.instance.currentUser;
-      if (fbUser != null) {
-        return (fbUser.email != null && fbUser.email!.isNotEmpty)
-            ? fbUser.email!
-            : '${fbUser.uid}@stylepulse.com';
-      }
     } catch (e) {
       debugPrint('세션 읽기 실패: $e');
     }

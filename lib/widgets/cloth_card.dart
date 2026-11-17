@@ -1,16 +1,14 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../models/cloth_item.dart';
+import 'cloth_thumbnail.dart';
 import 'dialogs/virtual_fitting_dialog.dart';
 
 class ClothCard extends StatefulWidget {
   final ClothItem item;
   final VoidCallback onDelete;
   final VoidCallback? onFavoriteToggle;
-
-  static final Map<String, Uint8List> _base64Cache = {};
 
   const ClothCard({
     super.key,
@@ -37,19 +35,6 @@ class _ClothCardState extends State<ClothCard> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.item.isFavorite != widget.item.isFavorite) {
       _isFavorite = widget.item.isFavorite;
-    }
-  }
-
-  static Uint8List? _getDecodedBytes(String base64Str) {
-    if (ClothCard._base64Cache.containsKey(base64Str)) {
-      return ClothCard._base64Cache[base64Str];
-    }
-    try {
-      final decoded = base64Decode(base64Str);
-      ClothCard._base64Cache[base64Str] = decoded;
-      return decoded;
-    } catch (_) {
-      return null;
     }
   }
 
@@ -85,7 +70,7 @@ class _ClothCardState extends State<ClothCard> {
           },
         );
       } else {
-        final bytes = _getDecodedBytes(imageUrl);
+        final bytes = ClothThumbnail.decodeBase64(imageUrl);
         if (bytes != null) {
           imageWidget = Image.memory(
             bytes,

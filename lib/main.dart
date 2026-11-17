@@ -84,6 +84,21 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
   final ClosetService _closetService = ClosetService();
+  late Stream<List<ClothItem>> _clothesStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _clothesStream = _closetService.getClothesStream(widget.userEmail);
+  }
+
+  @override
+  void didUpdateWidget(covariant MainNavigationScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userEmail != widget.userEmail) {
+      _clothesStream = _closetService.getClothesStream(widget.userEmail);
+    }
+  }
 
   void _onTabChange(int index) {
     setState(() {
@@ -94,7 +109,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<ClothItem>>(
-      stream: _closetService.getClothesStream(widget.userEmail),
+      stream: _clothesStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(

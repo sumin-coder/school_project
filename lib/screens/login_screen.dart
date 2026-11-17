@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -92,12 +91,12 @@ class _LoginScreenState extends State<LoginScreen> {
             ? user.email!
             : 'naver_user@naver.com';
 
-        final messenger = ScaffoldMessenger.of(context);
-        final nav = Navigator.of(context);
-
         await AuthService.saveLoggedInUserEmail(userEmail);
 
         if (!mounted) return;
+
+        final messenger = ScaffoldMessenger.of(context);
+        final nav = Navigator.of(context);
 
         messenger.showSnackBar(
           SnackBar(
@@ -197,12 +196,12 @@ class _LoginScreenState extends State<LoginScreen> {
             ? user.email!
             : 'kakao_user@kakao.com';
 
-        final messenger = ScaffoldMessenger.of(context);
-        final nav = Navigator.of(context);
-
         await AuthService.saveLoggedInUserEmail(userEmail);
 
         if (!mounted) return;
+
+        final messenger = ScaffoldMessenger.of(context);
+        final nav = Navigator.of(context);
 
         messenger.showSnackBar(
           SnackBar(
