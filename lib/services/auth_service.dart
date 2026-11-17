@@ -8,7 +8,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_naver_login/flutter_naver_login.dart';
 import 'package:flutter_naver_login/interface/types/naver_login_result.dart';
 import 'package:flutter_naver_login/interface/types/naver_login_status.dart';
-import 'package:http/http.dart' as http;
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -27,9 +26,6 @@ class AuthService {
   static const String _explicitLogoutKey = 'style_pulse_explicitly_logged_out';
   static const String _oauthErrorKey = 'style_pulse_oauth_error';
   static const String _kakaoOAuthStateKey = 'style_pulse_kakao_oauth_state';
-  static const String _oauthBaseUrl = String.fromEnvironment(
-    'STYLE_PULSE_OAUTH_URL',
-  );
   static const String _naverOAuthStateKey = 'style_pulse_naver_oauth_state';
 
   // 현재 사용자 Get
@@ -71,164 +67,84 @@ class AuthService {
     try {
       if (kIsWeb) {
         final uri = Uri.base;
+        final state = uri.queryParameters['state'] ?? '';
+        final isKakao = state.startsWith('kakao_');
+        final isNaver = state.startsWith('naver_');
         final isOAuthCallback =
             uri.queryParameters.containsKey('code') ||
             uri.queryParameters.containsKey('error');
+
         if (uri.queryParameters.containsKey('error')) {
-          final state = uri.queryParameters['state'] ?? '';
-          if (state.startsWith('kakao_') || state.startsWith('naver_')) {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.remove(
-              state.startsWith('kakao_')
-                  ? _kakaoOAuthStateKey
-                  : _naverOAuthStateKey,
-            );
-            await _saveOAuthError('소셜 로그인에 실패했거나 취소되었습니다. 다시 시도해 주세요.');
-          }
+          final prefs = await SharedPreferences.getInstance();
+          if (isKakao) await prefs.remove(_kakaoOAuthStateKey);
+          if (isNaver) await prefs.remove(_naverOAuthStateKey);
+          await _saveOAuthError('소셜 로그인이 취소되었거나 실패했습니다. 다시 시도해 주세요.');
           return null;
         }
-        if (uri.queryParameters.containsKey('code')) {
-          final code = uri.queryParameters['code']!;
-          final state = uri.queryParameters['state'] ?? '';
 
-          if (_oauthBaseUrl.isEmpty) {
-            await _saveOAuthError('OAuth 서버 주소가 설정되지 않았습니다.');
+        if (uri.queryParameters.containsKey('code')) {
+          final prefs = await SharedPreferences.getInstance();
+          final expectedState = isKakao
+              ? prefs.getString(_kakaoOAuthStateKey)
+              : isNaver
+              ? prefs.getString(_naverOAuthStateKey)
+              : null;
+          if (expectedState == null || expectedState != state) {
+            await _saveOAuthError('로그인 요청이 만료되었습니다. 다시 시도해 주세요.');
             return null;
           }
 
-          String userEmail = '';
-          String userName = '';
-
-          // 1. 카카오 웹 로그인 콜백 처리
-          if (state.startsWith('kakao_')) {
-            try {
-              final prefs = await SharedPreferences.getInstance();
-              if (prefs.getString(_kakaoOAuthStateKey) != state) {
-                await _saveOAuthError('카카오 로그인 요청 상태가 만료되었습니다. 다시 시도해 주세요.');
-                return null;
-              }
-              await prefs.remove(_kakaoOAuthStateKey);
-
-              final redirectUri = '${uri.origin}${uri.path}';
-              final response = await http.post(
-                Uri.parse('$_oauthBaseUrl/kakaoOAuth'),
-                headers: {'Content-Type': 'application/json'},
-                body: jsonEncode({
-                  'code': code,
-                  'state': state,
-                  'redirectUri': redirectUri,
-                }),
-              );
-              if (response.statusCode == 200) {
-                final userData = jsonDecode(response.body);
-                final kakaoId = userData['id']?.toString();
-                if (kakaoId != null && kakaoId.isNotEmpty) {
-                  userEmail = userData['email'] ?? 'kakao_$kakaoId@kakao.com';
-                  userName = userData['name'] ?? 'Kakao member';
-                }
-              } else {
-                debugPrint(
-                  'Kakao OAuth function failed: ${response.statusCode}',
-                );
-                await _saveOAuthError('카카오 로그인 서버 설정을 확인해 주세요.');
-              }
-            } catch (e) {
-              debugPrint('Kakao OAuth callback failed: $e');
-              await _saveOAuthError('카카오 로그인 서버에 연결할 수 없습니다.');
-            }
-          } else if (state.startsWith('naver_')) {
-            try {
-              final prefs = await SharedPreferences.getInstance();
-              if (prefs.getString(_naverOAuthStateKey) != state) {
-                await _saveOAuthError('네이버 로그인 요청 상태가 만료되었습니다. 다시 시도해 주세요.');
-                return null;
-              }
-              await prefs.remove(_naverOAuthStateKey);
-
-              final redirectUri = '${uri.origin}${uri.path}';
-              final response = await http.post(
-                Uri.parse('$_oauthBaseUrl/naverOAuth'),
-                headers: {'Content-Type': 'application/json'},
-                body: jsonEncode({
-                  'code': code,
-                  'state': state,
-                  'redirectUri': redirectUri,
-                }),
-              );
-              if (response.statusCode == 200) {
-                final userData = jsonDecode(response.body);
-                final naverId = userData['id']?.toString();
-                if (naverId != null && naverId.isNotEmpty) {
-                  userEmail = userData['email'] ?? 'naver_$naverId@naver.com';
-                  userName = userData['name'] ?? 'Naver member';
-                }
-              } else {
-                debugPrint(
-                  'Naver OAuth function failed: ${response.statusCode}',
-                );
-                await _saveOAuthError('네이버 로그인 서버 설정을 확인해 주세요.');
-              }
-            } catch (e) {
-              debugPrint('Naver OAuth callback failed: $e');
-              await _saveOAuthError('네이버 로그인 서버에 연결할 수 없습니다.');
-            }
+          await prefs.remove(
+            isKakao ? _kakaoOAuthStateKey : _naverOAuthStateKey,
+          );
+          final firebaseUser =
+              FirebaseAuth.instance.currentUser ??
+              (await FirebaseAuth.instance.signInAnonymously()).user;
+          if (firebaseUser == null) {
+            await _saveOAuthError('익명 로그인을 완료하지 못했습니다. 다시 시도해 주세요.');
+            return null;
           }
-          if (userEmail.isNotEmpty) {
-            try {
-              final uid = userEmail.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
-              final userDocRef = FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(uid);
-              await userDocRef.set({
-                'uid': uid,
-                'email': userEmail,
-                'name': userName.isNotEmpty
-                    ? userName
-                    : userEmail.split('@').first,
-                'gender': '선택안함',
-              }, SetOptions(merge: true));
 
-              await saveLoggedInUserEmail(userEmail);
-
-              if (FirebaseAuth.instance.currentUser == null) {
-                await FirebaseAuth.instance.signInAnonymously();
-              }
-            } catch (e) {
-              debugPrint('웹 소셜 로그인 Firestore 저장 오류: $e');
-            }
-            await launchUrl(
-              Uri.parse('${uri.origin}${uri.path}'),
-              webOnlyWindowName: '_self',
-            );
-            return userEmail;
+          final provider = isKakao ? 'kakao' : 'naver';
+          final userEmail = '${provider}_${firebaseUser.uid}@stylepulse.com';
+          try {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(firebaseUser.uid)
+                .set({
+                  'uid': firebaseUser.uid,
+                  'email': userEmail,
+                  'name': isKakao ? '카카오 사용자' : '네이버 사용자',
+                  'gender': '선택안함',
+                }, SetOptions(merge: true));
+          } catch (e) {
+            debugPrint('Firestore anonymous profile save failed: $e');
           }
+
+          await saveLoggedInUserEmail(userEmail);
+          await launchUrl(
+            Uri.parse('${uri.origin}${uri.path}'),
+            webOnlyWindowName: '_self',
+          );
+          return userEmail;
         }
 
-        // OAuth 콜백이 실패한 경우 이전 세션으로 로그인된 것처럼 처리하지 않습니다.
-        if (isOAuthCallback) {
-          final prefs = await SharedPreferences.getInstance();
-          if (prefs.getString(_oauthErrorKey) == null) {
-            await _saveOAuthError('소셜 로그인 응답을 확인할 수 없습니다. 다시 시도해 주세요.');
-          }
-          return null;
-        }
+        if (isOAuthCallback) return null;
       }
 
       final prefs = await SharedPreferences.getInstance();
       if (prefs.getBool(_explicitLogoutKey) == true) return null;
       final savedEmail = prefs.getString(_sessionKey);
-      if (savedEmail != null && savedEmail.isNotEmpty) {
-        return savedEmail;
-      }
+      if (savedEmail != null && savedEmail.isNotEmpty) return savedEmail;
 
-      final fbUser = FirebaseAuth.instance.currentUser;
-      if (fbUser != null) {
-        return (fbUser.email != null && fbUser.email!.isNotEmpty)
-            ? fbUser.email!
-            : '${fbUser.uid}@stylepulse.com';
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      if (firebaseUser != null) {
+        return firebaseUser.email?.isNotEmpty == true
+            ? firebaseUser.email!
+            : '${firebaseUser.uid}@stylepulse.com';
       }
     } catch (e) {
-      debugPrint('세션 읽기 실패: $e');
+      debugPrint('Session restore failed: $e');
     }
     return null;
   }
@@ -238,6 +154,7 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_explicitLogoutKey, true);
       await prefs.remove(_sessionKey);
+      await prefs.remove(_kakaoOAuthStateKey);
       await prefs.remove(_naverOAuthStateKey);
     } catch (e) {
       debugPrint('세션 삭제 실패: $e');
