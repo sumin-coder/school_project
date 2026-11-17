@@ -19,6 +19,7 @@ class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   static const String _sessionKey = 'style_pulse_logged_in_email';
+  static const String _explicitLogoutKey = 'style_pulse_explicitly_logged_out';
 
   // 현재 사용자 Get
   User? get currentUser => _auth.currentUser;
@@ -28,6 +29,7 @@ class AuthService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_sessionKey, email.trim());
+      await prefs.remove(_explicitLogoutKey);
     } catch (e) {
       debugPrint('세션 저장 실패: $e');
     }
@@ -175,6 +177,7 @@ class AuthService {
       }
 
       final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(_explicitLogoutKey) == true) return null;
       final savedEmail = prefs.getString(_sessionKey);
       if (savedEmail != null && savedEmail.isNotEmpty) {
         return savedEmail;
@@ -189,6 +192,7 @@ class AuthService {
   static Future<void> clearSavedLoggedInUserEmail() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_explicitLogoutKey, true);
       await prefs.remove(_sessionKey);
     } catch (e) {
       debugPrint('세션 삭제 실패: $e');

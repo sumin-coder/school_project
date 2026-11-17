@@ -15,5 +15,19 @@ void main() {
     await AuthService.clearSavedLoggedInUserEmail();
 
     expect(await AuthService.getSavedLoggedInUserEmail(), isNull);
+    expect(
+      (await SharedPreferences.getInstance()).getBool(
+        'style_pulse_explicitly_logged_out',
+      ),
+      isTrue,
+    );
+  });
+
+  test('explicit logout overrides a stale saved email', () async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('style_pulse_logged_in_email', 'old@example.com');
+    await prefs.setBool('style_pulse_explicitly_logged_out', true);
+
+    expect(await AuthService.getSavedLoggedInUserEmail(), isNull);
   });
 }
