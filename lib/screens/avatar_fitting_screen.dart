@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:typed_data' as typed_data;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -264,6 +265,14 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final screenSize = MediaQuery.sizeOf(context);
+    final avatarScale = math
+        .min(
+          1.8,
+          math.min((screenSize.width - 48) / 260, (screenSize.height - 260) / 380),
+        )
+        .clamp(1.0, 1.8)
+        .toDouble();
 
     final filteredClothes = _selectedCategory == '전체'
         ? widget.clothes
@@ -339,12 +348,14 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
                         ),
 
                         // 🧍 정밀 비율 스케일드 3D 아바타 피규어 & 레이어 박스 (260 x 380)
-                        SizedBox(
-                          width: 260,
-                          height: 380,
-                          child: Stack(
-                            alignment: Alignment.topCenter,
-                            children: [
+                        Transform.scale(
+                          scale: avatarScale,
+                          child: SizedBox(
+                            width: 260,
+                            height: 380,
+                            child: Stack(
+                              alignment: Alignment.topCenter,
+                              children: [
                               // 1. 아바타 피규어 마네킹 또는 내 사진 기반 아바타
                               if (_isGeneratingAvatar)
                                 const Center(
@@ -366,7 +377,8 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
                               _buildEquippedCloth(_equippedScarf),
                               _buildEquippedCloth(_equippedAccessory),
                               _buildEquippedCloth(_equippedShoes),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
 
