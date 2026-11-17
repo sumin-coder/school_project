@@ -189,7 +189,6 @@ class AuthService {
             ? fbUser.email!
             : '${fbUser.uid}@stylepulse.com';
       }
-
     } catch (e) {
       debugPrint('세션 읽기 실패: $e');
     }
@@ -534,12 +533,18 @@ class AuthService {
   // 로그아웃
   Future<void> signOut() async {
     await clearSavedLoggedInUserEmail();
+    if (!kIsWeb) {
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (_) {}
+      try {
+        await FlutterNaverLogin.logOut();
+      } catch (_) {}
+    }
     try {
-      await GoogleSignIn.instance.signOut();
-    } catch (_) {}
-    try {
-      await FlutterNaverLogin.logOut();
-    } catch (_) {}
-    await _auth.signOut();
+      await _auth.signOut().timeout(const Duration(seconds: 3));
+    } catch (e) {
+      debugPrint('Firebase sign-out failed: $e');
+    }
   }
 }
