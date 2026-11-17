@@ -30,4 +30,15 @@ void main() {
 
     expect(await AuthService.getSavedLoggedInUserEmail(), isNull);
   });
+
+  test('a new successful login clears the explicit logout state', () async {
+    await AuthService.clearSavedLoggedInUserEmail();
+
+    await AuthService.saveLoggedInUserEmail('new@example.com');
+
+    expect(
+      await AuthService.getSavedLoggedInUserEmail(),
+      'new@example.com',
+    );
+  });
 }
