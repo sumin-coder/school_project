@@ -107410,7 +107410,7 @@ j="kakao_"+A.fP(f,"=","")
 s=8
 return A.k(n.td("String","style_pulse_kakao_oauth_state",j),$async$vj)
 case 8:i=A.qi().goL()+A.qi().gdd()
-h=A.aYF("https","kauth.kakao.com","/oauth/authorize",A.af(["response_type","code","client_id","b27cbbdaa02e789fe460b63bfd7796ec","redirect_uri",i,"state",j,"scope","account_email,profile_nickname"],t.N,t.z))
+h=A.aYF("https","kauth.kakao.com","/oauth/authorize",A.af(["response_type","code","client_id","b27cbbdaa02e789fe460b63bfd7796ec","redirect_uri",i,"state",j],t.N,t.z))
 A.b_B(h.gpX())
 q=null
 s=1
