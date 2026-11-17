@@ -13,6 +13,10 @@ import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'oauth_navigation_stub.dart'
+    if (dart.library.html) 'oauth_navigation_web.dart'
+    as oauth_navigation;
+
 import '../models/user_model.dart';
 
 class AuthService {
@@ -342,14 +346,7 @@ class AuthService {
           'redirect_uri': redirectUri,
           'state': state,
         });
-        final launched = await launchUrl(
-          authUri,
-          webOnlyWindowName: '_self', // 현재 창에서 카카오 로그인 페이지로 이동
-        );
-        if (!launched) {
-          await prefs.remove(_kakaoOAuthStateKey);
-          throw StateError('Kakao login page could not be opened.');
-        }
+        oauth_navigation.navigate(authUri.toString());
         return null;
       }
 
@@ -531,14 +528,7 @@ class AuthService {
           'state': state,
         });
 
-        final launched = await launchUrl(
-          authUri,
-          webOnlyWindowName: '_self', // 현재 창에서 네이버 로그인 페이지로 이동
-        );
-        if (!launched) {
-          await prefs.remove(_naverOAuthStateKey);
-          throw StateError('네이버 로그인 페이지를 열 수 없습니다.');
-        }
+        oauth_navigation.navigate(authUri.toString());
         return null;
       }
 
