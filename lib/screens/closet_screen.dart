@@ -209,7 +209,7 @@ class _ClosetScreenState extends State<ClosetScreen> {
         final gridWidth = constraints.maxWidth < 1500
             ? constraints.maxWidth
             : 1500.0;
-        final crossAxisCount = (gridWidth / 250).floor().clamp(2, 6).toInt();
+        final crossAxisCount = (gridWidth / 300).floor().clamp(2, 5).toInt();
         final isDesktop = constraints.maxWidth >= 600;
 
         return Center(

@@ -166,7 +166,7 @@ class _RecommendScreenState extends State<RecommendScreen> {
         title: const Text('AI 맞춤 코디 추천'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.sports_esports),
+            icon: const Icon(Icons.checkroom),
             tooltip: '3D 아바타 피팅룸',
             onPressed: () {
               Navigator.push(
