@@ -32092,8 +32092,8 @@ break
 case 5:return A.o(null,r)
 case 1:return A.n(p.at(-1),r)}})
 return A.p($async$l2,r)},
-ey(){var s=0,r=A.q(t.B),q,p=2,o=[],n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,c0,c1
-var $async$ey=A.r(function(c2,c3){if(c2===1){o.push(c3)
+ey(){var s=0,r=A.q(t.B),q,p=2,o=[],n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,c0,c1,c2
+var $async$ey=A.r(function(c3,c4){if(c3===1){o.push(c4)
 s=p}for(;;)switch(s){case 0:p=4
 n=A.qi()
 a7=n.gr0().h(0,"state")
@@ -32105,7 +32105,7 @@ s=n.gr0().am("error")?7:8
 break
 case 7:s=9
 return A.k(A.iE(),$async$ey)
-case 9:i=c3
+case 9:i=c4
 s=l?10:11
 break
 case 10:s=12
@@ -32123,7 +32123,7 @@ case 8:s=n.gr0().am("code")?17:18
 break
 case 17:s=19
 return A.k(A.iE(),$async$ey)
-case 19:h=c3
+case 19:h=c4
 if(l)a8=A.ai(h.a.h(0,"style_pulse_kakao_oauth_state"))
 else a8=k?A.ai(h.a.h(0,"style_pulse_naver_oauth_state")):null
 g=a8
@@ -32154,16 +32154,16 @@ case 27:d=A.bH()
 p=30
 b1=A.es("https://style-pulse-oauth.style-pulse.workers.dev/kakaoOAuth",0,null)
 b2=A.af(["Content-Type","application/json"],a9,a9)
-c1=d
+c2=d
 s=33
 return A.k(A.aRH(b1,B.aR.xO(A.af(["code",n.gr0().h(0,"code"),"state",m,"redirectUri",n.goL()+n.gdd()],a9,t.B),null),b2),$async$ey)
-case 33:c1.see(c3)
+case 33:c2.see(c4)
 p=4
 s=32
 break
 case 30:p=29
-b8=o.pop()
-c=A.T(b8)
+b9=o.pop()
+c=A.T(b9)
 A.ee().$1("Kakao profile request failed: "+A.j(c))
 s=34
 return A.k(A.l2("\uce74\uce74\uc624 \ud504\ub85c\ud544 \uc11c\ubc84\uc5d0 \uc5f0\uacb0\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4."),$async$ey)
@@ -32203,7 +32203,7 @@ b4=(b2==null?$.bE=$.dt():b2).dE("[DEFAULT]")
 A.bS(b4,b1,!0)
 s=43
 return A.k(A.rV(new A.cO(b4)).hT(),$async$ey)
-case 43:a5=c3.grh()
+case 43:a5=c4.grh()
 case 42:b=a5
 s=b==null?44:45
 break
@@ -32215,12 +32215,13 @@ break
 case 45:b2=J.cf(e,"id")
 b5=b2==null?null:J.bV(b2)
 a=b5==null?b.a.c.a.a:b5
-b2=J.cf(e,"email")
-a0=(b2==null?null:B.c.cd(J.bV(b2)).length!==0)===!0?B.c.cd(J.bV(J.cf(e,"email"))):A.j(f)+"_"+A.j(a)+"@stylepulse.com"
+if(l)b6="kakao_"+A.j(a)+"@stylepulse.com"
+else{b2=J.cf(e,"email")
+b6=(b2==null?null:B.c.cd(J.bV(b2)).length!==0)===!0?B.c.cd(J.bV(J.cf(e,"email"))):A.j(f)+"_"+A.j(a)+"@stylepulse.com"}a0=b6
 b2=J.cf(e,"name")
-if((b2==null?null:B.c.cd(J.bV(b2)).length!==0)===!0)b6=B.c.cd(J.bV(J.cf(e,"name")))
-else b6=l?"\uce74\uce74\uc624 \uc0ac\uc6a9\uc790":"\ub124\uc774\ubc84 \uc0ac\uc6a9\uc790"
-a1=b6
+if((b2==null?null:B.c.cd(J.bV(b2)).length!==0)===!0)b7=B.c.cd(J.bV(J.cf(e,"name")))
+else b7=l?"\uce74\uce74\uc624 \uc0ac\uc6a9\uc790":"\ub124\uc774\ubc84 \uc0ac\uc6a9\uc790"
+a1=b7
 p=48
 b2=$.bE
 b4=(b2==null?$.bE=$.dt():b2).dE("[DEFAULT]")
@@ -32229,8 +32230,8 @@ b1=A.mQ(new A.cO(b4)).eN("users")
 b2=A.cQ("[^a-zA-Z0-9_]",!0,!1)
 b1=b1.f2(A.fP(a0,b2,"_"))
 b2=b.a
-b7=$.aRZ().GR()
-b0=A.af(["uid",b2.c.a.a,"email",a0,"name",a1,"gender","\uc120\ud0dd\uc548\ud568","provider",f,"providerId",a,"updatedAt",new A.oR(b7,b7)],a9,b0)
+b8=$.aRZ().GR()
+b0=A.af(["uid",b2.c.a.a,"email",a0,"name",a1,"gender","\uc120\ud0dd\uc548\ud568","provider",f,"providerId",a,"updatedAt",new A.oR(b8,b8)],a9,b0)
 a9=A.aWB(!0)
 b0=A.Jw(b0)
 b0.toString
@@ -32240,8 +32241,8 @@ case 51:p=4
 s=50
 break
 case 48:p=47
-b9=o.pop()
-a2=A.T(b9)
+c0=o.pop()
+a2=A.T(c0)
 A.ee().$1("Firestore anonymous profile save failed: "+A.j(a2))
 s=50
 break
@@ -32258,7 +32259,7 @@ case 18:if(j){q=null
 s=1
 break}s=54
 return A.k(A.iE(),$async$ey)
-case 54:a3=c3
+case 54:a3=c4
 if(A.ha(a3.a.h(0,"style_pulse_explicitly_logged_out"))===!0){q=null
 s=1
 break}a4=A.ai(a3.a.h(0,"style_pulse_logged_in_email"))
@@ -32277,8 +32278,8 @@ break}p=2
 s=6
 break
 case 4:p=3
-c0=o.pop()
-a6=A.T(c0)
+c1=o.pop()
+a6=A.T(c1)
 A.ee().$1("Session restore failed: "+A.j(a6))
 s=6
 break
