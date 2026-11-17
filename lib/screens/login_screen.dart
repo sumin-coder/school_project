@@ -25,18 +25,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isPasswordVisible = false;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final message = await AuthService.consumeOAuthError();
-      if (!mounted || message == null) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
-      );
-    });
-  }
-
-  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -55,8 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text,
       );
 
-      final userEmail =
-          userCredential?.user?.email ?? _emailController.text.trim();
+      final userEmail = userCredential?.user?.email ?? _emailController.text.trim();
       await AuthService.saveLoggedInUserEmail(userEmail);
 
       if (mounted) {
@@ -69,9 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } on FirebaseAuthException catch (e) {
       String message = '로그인에 실패했습니다.';
-      if (e.code == 'user-not-found' ||
-          e.code == 'wrong-password' ||
-          e.code == 'invalid-credential') {
+      if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
         message = '아이디(이메일) 또는 비밀번호가 올바르지 않습니다.';
       } else if (e.code == 'invalid-email') {
         message = '올바른 형식의 아이디나 이메일이 아닙니다.';
@@ -87,10 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('오류가 발생했습니다: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
+          SnackBar(content: Text('오류가 발생했습니다: $e'), backgroundColor: Colors.redAccent),
         );
       }
     } finally {
@@ -184,8 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
           msg = 'Firebase 도메인 설정 필요: Firebase 콘솔 > Authentication > Settings > 승인된 도메인에 sumin-coder.github.io 를 등록해 주세요.';
         } else if (errStr.contains('permission-denied')) {
           msg = 'Firebase DB 보안 규칙 설정 필요: Firestore Database > Rules 탭에서 allow read, write: if true; 를 설정해 주세요.';
-        } else if (errStr.contains('popup-blocked') ||
-            errStr.contains('popup_blocked')) {
+        } else if (errStr.contains('popup-blocked') || errStr.contains('popup_blocked')) {
           msg = '브라우저 팝업이 차단되었습니다. 주소창 우측에서 팝업 허용을 설정하고 다시 시도해 주세요.';
         } else if (errStr.contains('operation-not-allowed')) {
           msg = 'Firebase 콘솔 > Authentication > Sign-in method 에서 구글(Google) 제공업체를 활성화해 주세요.';
@@ -259,10 +240,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24.0,
-              vertical: 16.0,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
             child: Form(
               key: _formKey,
               child: Column(
@@ -318,9 +296,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     obscureText: !_isPasswordVisible,
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isPasswordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                        _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
                         color: Colors.grey,
                       ),
                       onPressed: () {
@@ -364,10 +340,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             )
                           : const Text(
                               '로그인',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                     ),
                   ),
@@ -378,9 +351,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         '계정이 없으신가요?',
                         style: TextStyle(
-                          color: isDarkMode
-                              ? Colors.grey[400]
-                              : Colors.grey[600],
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                           fontSize: 13,
                         ),
                       ),
@@ -388,9 +359,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) => const SignUpScreen(),
-                            ),
+                            MaterialPageRoute(builder: (context) => const SignUpScreen()),
                           );
                         },
                         child: const Text(
@@ -407,32 +376,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Expanded(
-                        child: Divider(
-                          color: isDarkMode
-                              ? Colors.grey[800]
-                              : Colors.grey[300],
-                        ),
-                      ),
+                      Expanded(child: Divider(color: isDarkMode ? Colors.grey[800] : Colors.grey[300])),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12.0),
                         child: Text(
                           '간편로그인',
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDarkMode
-                                ? Colors.grey[500]
-                                : Colors.grey[500],
+                            color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
                           ),
                         ),
                       ),
-                      Expanded(
-                        child: Divider(
-                          color: isDarkMode
-                              ? Colors.grey[800]
-                              : Colors.grey[300],
-                        ),
-                      ),
+                      Expanded(child: Divider(color: isDarkMode ? Colors.grey[800] : Colors.grey[300])),
                     ],
                   ),
                   const SizedBox(height: 20),

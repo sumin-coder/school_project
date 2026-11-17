@@ -1,7 +1,0 @@
-﻿name = "style-pulse-oauth"
-main = "worker.js"
-compatibility_date = "2026-11-17"
-
-[vars]
-NAVER_CLIENT_ID = "BzaebjNVvZntEFUervTF"
-KAKAO_REST_API_KEY = "97b4011bc63ddb77be006cdd8eae6814"
