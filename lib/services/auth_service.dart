@@ -310,7 +310,6 @@ class AuthService {
           'client_id': kakaoClientId,
           'redirect_uri': redirectUri,
           'state': state,
-          'scope': 'account_email,profile_nickname',
         });
         oauth_navigation.navigate(authUri.toString());
         return null;
