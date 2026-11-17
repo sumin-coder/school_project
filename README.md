@@ -43,3 +43,19 @@
 * **Image Processing**: On-Device C++ Canvas Graphics Engine (`dart:ui`)
 * **AI Model**: Groq LLM (`llama-3.3-70b-versatile`)
 * **Deployment**: GitHub Pages (`gh-pages`)
+
+## 네이버 웹 로그인 배포 설정
+
+네이버 Client Secret은 Flutter 웹 코드에 넣지 않고 Firebase Functions Secret Manager에 보관합니다. Firebase Functions 배포에는 Blaze 요금제가 필요합니다.
+
+1. 네이버 개발자센터의 로그인 callback URL에 `https://sumin-coder.github.io/school_project/`를 등록합니다. 로컬 테스트 시에는 `http://localhost:5173/`도 등록합니다.
+2. 네이버 개발자센터에서 Client Secret을 새로 발급한 뒤 프로젝트 루트에서 `firebase functions:secrets:set NAVER_CLIENT_SECRET`을 실행하고, 터미널의 비밀 입력 프롬프트에 새 값을 직접 입력합니다.
+3. `firebase deploy --only functions:naverOAuth`를 실행합니다.
+
+Client Secret은 코드, GitHub, 채팅에 붙여 넣지 마세요. GitHub Pages와 Firebase Function의 callback URL 허용 목록이 일치해야 합니다.
+
+## 카카오 웹 로그인 배포 설정
+
+카카오 REST API 토큰 교환에는 Client Secret이 필요할 수 있으며, 이 프로젝트는 비밀 값을 Flutter 코드에 넣지 않고 Firebase Functions에서 사용합니다. Kakao Developers의 REST API 키에 라이브 주소 `https://sumin-coder.github.io/school_project/`와 로컬 주소 `http://localhost:5173/`를 Redirect URI로 등록하세요.
+
+Firebase 프로젝트에서 `firebase functions:secrets:set KAKAO_CLIENT_SECRET`을 실행하고 프롬프트에서 Client Secret을 입력하세요. 네이버 secret도 설정한 뒤 `firebase deploy --only functions`로 두 OAuth 함수를 배포합니다. Functions 배포에는 Blaze 요금제가 필요합니다.
