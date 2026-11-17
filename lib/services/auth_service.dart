@@ -23,11 +23,10 @@ class AuthService {
   static const String _explicitLogoutKey = 'style_pulse_explicitly_logged_out';
   static const String _oauthErrorKey = 'style_pulse_oauth_error';
   static const String _kakaoOAuthStateKey = 'style_pulse_kakao_oauth_state';
-  static const String _kakaoOAuthFunctionUrl =
-      'https://us-central1-device-streaming-b832713a.cloudfunctions.net/kakaoOAuth';
+  static const String _oauthBaseUrl = String.fromEnvironment(
+    'STYLE_PULSE_OAUTH_URL',
+  );
   static const String _naverOAuthStateKey = 'style_pulse_naver_oauth_state';
-  static const String _naverOAuthFunctionUrl =
-      'https://us-central1-device-streaming-b832713a.cloudfunctions.net/naverOAuth';
 
   // 현재 사용자 Get
   User? get currentUser => _auth.currentUser;
@@ -88,6 +87,11 @@ class AuthService {
           final code = uri.queryParameters['code']!;
           final state = uri.queryParameters['state'] ?? '';
 
+          if (_oauthBaseUrl.isEmpty) {
+            await _saveOAuthError('OAuth 서버 주소가 설정되지 않았습니다.');
+            return null;
+          }
+
           String userEmail = '';
           String userName = '';
 
@@ -103,7 +107,7 @@ class AuthService {
 
               final redirectUri = '${uri.origin}${uri.path}';
               final response = await http.post(
-                Uri.parse(_kakaoOAuthFunctionUrl),
+                Uri.parse('$_oauthBaseUrl/kakaoOAuth'),
                 headers: {'Content-Type': 'application/json'},
                 body: jsonEncode({
                   'code': code,
@@ -139,7 +143,7 @@ class AuthService {
 
               final redirectUri = '${uri.origin}${uri.path}';
               final response = await http.post(
-                Uri.parse(_naverOAuthFunctionUrl),
+                Uri.parse('$_oauthBaseUrl/naverOAuth'),
                 headers: {'Content-Type': 'application/json'},
                 body: jsonEncode({
                   'code': code,
