@@ -8,6 +8,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_naver_login/flutter_naver_login.dart';
 import 'package:flutter_naver_login/interface/types/naver_login_result.dart';
 import 'package:flutter_naver_login/interface/types/naver_login_status.dart';
+import 'package:http/http.dart' as http;
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -27,6 +28,9 @@ class AuthService {
   static const String _oauthErrorKey = 'style_pulse_oauth_error';
   static const String _kakaoOAuthStateKey = 'style_pulse_kakao_oauth_state';
   static const String _naverOAuthStateKey = 'style_pulse_naver_oauth_state';
+  static const String _oauthBaseUrl = String.fromEnvironment(
+    'STYLE_PULSE_OAUTH_URL',
+  );
 
   // 현재 사용자 Get
   User? get currentUser => _auth.currentUser;
@@ -94,9 +98,46 @@ class AuthService {
             return null;
           }
 
-          await prefs.remove(
-            isKakao ? _kakaoOAuthStateKey : _naverOAuthStateKey,
-          );
+          if (!isKakao && !isNaver) {
+            await _saveOAuthError('지원하지 않는 소셜 로그인 응답입니다.');
+            return null;
+          }
+          await prefs.remove(isKakao ? _kakaoOAuthStateKey : _naverOAuthStateKey);
+
+          final provider = isKakao ? 'kakao' : 'naver';
+          Map<String, dynamic> profile = {};
+          if (isKakao && _oauthBaseUrl.isEmpty) {
+            await _saveOAuthError('카카오 프로필 서버가 설정되지 않았습니다.');
+            return null;
+          }
+          if (isKakao) {
+            late final http.Response response;
+            try {
+              response = await http.post(
+                Uri.parse('$_oauthBaseUrl/kakaoOAuth'),
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode({
+                  'code': uri.queryParameters['code'],
+                  'state': state,
+                  'redirectUri': '${uri.origin}${uri.path}',
+                }),
+              );
+            } catch (e) {
+              debugPrint('Kakao profile request failed: $e');
+              await _saveOAuthError('카카오 프로필 서버에 연결할 수 없습니다.');
+              return null;
+            }
+            if (response.statusCode != 200) {
+              debugPrint('Kakao profile request failed: ${response.statusCode}');
+              await _saveOAuthError('카카오 계정 정보를 가져오지 못했습니다. 카카오 설정을 확인해 주세요.');
+              return null;
+            }
+            profile = jsonDecode(response.body) as Map<String, dynamic>;
+            if (profile['id'] == null) {
+              await _saveOAuthError('카카오 계정 정보를 확인할 수 없습니다.');
+              return null;
+            }
+          }
           final firebaseUser =
               FirebaseAuth.instance.currentUser ??
               (await FirebaseAuth.instance.signInAnonymously()).user;
@@ -105,17 +146,25 @@ class AuthService {
             return null;
           }
 
-          final provider = isKakao ? 'kakao' : 'naver';
-          final userEmail = '${provider}_${firebaseUser.uid}@stylepulse.com';
+          final providerId = profile['id']?.toString() ?? firebaseUser.uid;
+          final userEmail = profile['email']?.toString().trim().isNotEmpty == true
+              ? profile['email'].toString().trim()
+              : '${provider}_$providerId@stylepulse.com';
+          final userName = profile['name']?.toString().trim().isNotEmpty == true
+              ? profile['name'].toString().trim()
+              : (isKakao ? '카카오 사용자' : '네이버 사용자');
           try {
             await FirebaseFirestore.instance
                 .collection('users')
-                .doc(firebaseUser.uid)
+                .doc(userEmail.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_'))
                 .set({
                   'uid': firebaseUser.uid,
                   'email': userEmail,
-                  'name': isKakao ? '카카오 사용자' : '네이버 사용자',
+                  'name': userName,
                   'gender': '선택안함',
+                  'provider': provider,
+                  'providerId': providerId,
+                  'updatedAt': FieldValue.serverTimestamp(),
                 }, SetOptions(merge: true));
           } catch (e) {
             debugPrint('Firestore anonymous profile save failed: $e');
@@ -246,7 +295,7 @@ class AuthService {
   Future<User?> signInWithKakao() async {
     try {
       if (kIsWeb) {
-        const kakaoClientId = '97b4011bc63ddb77be006cdd8eae6814';
+        const kakaoClientId = 'b27cbbdaa02e789fe460b63bfd7796ec';
         final prefs = await SharedPreferences.getInstance();
         final randomBytes = List<int>.generate(
           32,
@@ -261,6 +310,7 @@ class AuthService {
           'client_id': kakaoClientId,
           'redirect_uri': redirectUri,
           'state': state,
+          'scope': 'account_email,profile_nickname',
         });
         oauth_navigation.navigate(authUri.toString());
         return null;

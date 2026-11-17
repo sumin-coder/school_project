@@ -43,3 +43,15 @@
 * **Image Processing**: On-Device C++ Canvas Graphics Engine (`dart:ui`)
 * **AI Model**: Groq LLM (`llama-3.3-70b-versatile`)
 * **Deployment**: GitHub Pages (`gh-pages`)
+
+## Kakao web login profile setup
+
+GitHub Pages cannot safely exchange Kakao authorization codes by itself. Deploy the free Cloudflare Worker in `cloudflare/`, then build the web app with its Worker URL:
+
+```powershell
+npx.cmd wrangler login
+npx.cmd wrangler deploy --config cloudflare/wrangler.toml
+flutter build web --release --no-tree-shake-icons --base-href /school_project/ --dart-define=STYLE_PULSE_OAUTH_URL=https://style-pulse-oauth.<your-account>.workers.dev
+```
+
+Publish the resulting `build/web` contents to `gh-pages`. In Kakao Developers, enable Kakao Login and the email/nickname consent items, then register `https://sumin-coder.github.io/school_project/` as the redirect URI for both the JavaScript and REST API keys. The JavaScript key's allowed SDK domain should include `https://sumin-coder.github.io`. The Worker uses the REST API key already configured in `cloudflare/wrangler.toml`; if Kakao Client Secret is enabled for the app, set it with `npx.cmd wrangler secret put KAKAO_CLIENT_SECRET --config cloudflare/wrangler.toml`.
