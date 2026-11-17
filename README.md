@@ -43,3 +43,17 @@
 * **Image Processing**: On-Device C++ Canvas Graphics Engine (`dart:ui`)
 * **AI Model**: Groq LLM (`llama-3.3-70b-versatile`)
 * **Deployment**: GitHub Pages (`gh-pages`)
+
+## Free web OAuth deployment with Cloudflare Workers
+
+Firebase Spark does not deploy Cloud Functions. This project uses a Cloudflare Worker for the Naver and Kakao authorization-code exchange so provider secrets stay off the Flutter client. The Worker Free plan has usage limits.
+
+1. Create a Cloudflare account, then run `npx.cmd wrangler login` and `npx.cmd wrangler deploy` from the `cloudflare` directory.
+2. Add `NAVER_CLIENT_SECRET` and `KAKAO_CLIENT_SECRET` as Worker secrets. Reissue the exposed Naver secret in Naver Developers before saving the replacement.
+3. Build the web app with the URL Cloudflare prints after deployment:
+
+```powershell
+flutter build web --release --no-tree-shake-icons --base-href /school_project/ --dart-define=STYLE_PULSE_OAUTH_URL=https://style-pulse-oauth.<your-account>.workers.dev
+```
+
+Allowed callback URLs are `https://sumin-coder.github.io/school_project/` and `http://localhost:5173/`. Register the live callback URL in both provider consoles.
