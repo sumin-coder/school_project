@@ -180,10 +180,9 @@ class _RecommendationCardState extends State<RecommendationCard> {
             SizedBox(
               width: double.infinity,
               height: 42,
-              child: ElevatedButton.icon(
+              child: ElevatedButton(
                 onPressed: () => _navigateToAvatarFittingRoom(context),
-                icon: const Icon(Icons.sports_esports, size: 18),
-                label: const Text('🎮 3D 아바타에서 입어보기', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                child: const Text('3D 아바타에서 입어보기', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,

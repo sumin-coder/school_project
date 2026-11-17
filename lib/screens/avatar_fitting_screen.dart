@@ -40,6 +40,8 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
   ClothItem? _equippedBottom;
   ClothItem? _equippedOuter;
   ClothItem? _equippedShoes;
+  ClothItem? _equippedScarf;
+  ClothItem? _equippedAccessory;
 
   String _selectedCategory = '전체';
 
@@ -101,7 +103,14 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
       } else if (item.category == '아우터') {
         _equippedOuter = item;
       } else if (item.category == '신발/잡화') {
-        _equippedShoes = item;
+        final title = item.title.toLowerCase();
+        if (RegExp(r'목도리|스카프|머플러').hasMatch(title)) {
+          _equippedScarf = item;
+        } else if (RegExp(r'신발|운동화|구두|부츠|샌들|슬리퍼|sneaker|shoes?').hasMatch(title)) {
+          _equippedShoes = item;
+        } else {
+          _equippedAccessory = item;
+        }
       } else {
         _equippedTop = item;
       }
@@ -125,7 +134,14 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
       } else if (item.category == '아우터') {
         _equippedOuter = (_equippedOuter?.id == item.id) ? null : item;
       } else if (item.category == '신발/잡화') {
-        _equippedShoes = (_equippedShoes?.id == item.id) ? null : item;
+        final title = item.title.toLowerCase();
+        if (RegExp(r'목도리|스카프|머플러').hasMatch(title)) {
+          _equippedScarf = (_equippedScarf?.id == item.id) ? null : item;
+        } else if (RegExp(r'신발|운동화|구두|부츠|샌들|슬리퍼|sneaker|shoes?').hasMatch(title)) {
+          _equippedShoes = (_equippedShoes?.id == item.id) ? null : item;
+        } else {
+          _equippedAccessory = (_equippedAccessory?.id == item.id) ? null : item;
+        }
       } else {
         _equippedTop = (_equippedTop?.id == item.id) ? null : item;
       }
@@ -138,6 +154,8 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
       _equippedBottom = null;
       _equippedOuter = null;
       _equippedShoes = null;
+      _equippedScarf = null;
+      _equippedAccessory = null;
     });
   }
 
@@ -172,6 +190,41 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
       height: height,
       child: child,
     );
+  }
+
+  Widget _buildEquippedCloth(ClothItem? item) {
+    if (item == null) return const SizedBox.shrink();
+    final title = item.title.toLowerCase();
+    if (RegExp(r'목도리|스카프|머플러').hasMatch(title)) {
+      return _buildEquippedClothImageRelative(item, top: 36, left: 83, width: 94, height: 74);
+    }
+    if (RegExp(r'모자|캡|비니|hat|cap').hasMatch(title)) {
+      return _buildEquippedClothImageRelative(item, top: 0, left: 83, width: 94, height: 74);
+    }
+    if (RegExp(r'가방|백팩|숄더백|bag|backpack').hasMatch(title)) {
+      return _buildEquippedClothImageRelative(item, top: 102, left: 0, width: 92, height: 130);
+    }
+    if (item.category == '상의') {
+      final isCropped = RegExp(r'크롭|cropped').hasMatch(title);
+      return _buildEquippedClothImageRelative(item,
+        top: 68, left: isCropped ? 57 : 45,
+        width: isCropped ? 146 : 170, height: isCropped ? 105 : 142);
+    }
+    if (item.category == '하의') {
+      final isShort = RegExp(r'반바지|숏츠|shorts').hasMatch(title);
+      return _buildEquippedClothImageRelative(item,
+        top: 145, left: 55, width: 150, height: isShort ? 105 : 150);
+    }
+    if (item.category == '아우터') {
+      final isLong = RegExp(r'롱|코트|long|coat').hasMatch(title);
+      return _buildEquippedClothImageRelative(item,
+        top: 62, left: isLong ? 28 : 35,
+        width: isLong ? 204 : 190, height: isLong ? 220 : 170);
+    }
+    if (item == _equippedShoes) {
+      return _buildEquippedClothImageRelative(item, top: 304, left: 72, width: 116, height: 46);
+    }
+    return _buildEquippedClothImageRelative(item, top: 130, left: 170, width: 82, height: 110);
   }
 
   Widget _buildPaletteItemCard(ClothItem item, bool isEquipped, bool isDarkMode) {
@@ -218,13 +271,7 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Row(
-          children: [
-            Icon(Icons.sports_esports, color: AppColors.primary),
-            SizedBox(width: 8),
-            Text('3D 아바타 피팅룸'),
-          ],
-        ),
+        title: const Text('3D 아바타 피팅룸'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_a_photo_outlined),
@@ -311,52 +358,14 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
                                   ),
                                 )
                               else if (_customAvatarBytes != null)
-                                Image.memory(_customAvatarBytes!, width: 260, height: 380, fit: BoxFit.contain)
-                              else
-                                Positioned(
-                                  top: 30,
-                                  child: Icon(
-                                    Icons.accessibility_new,
-                                    size: 260,
-                                    color: isDarkMode ? Colors.grey[700] : Colors.grey[400],
-                                  ),
-                                ),
+                                Image.memory(_customAvatarBytes!, width: 260, height: 380, fit: BoxFit.contain),
 
-                              // 2. 👗 하의 (Pants/Jeans) - 허리에서 발목까지
-                              _buildEquippedClothImageRelative(
-                                _equippedBottom,
-                                top: 145,
-                                left: 55,
-                                width: 150,
-                                height: 150,
-                              ),
-
-                              // 3. 👕 상의 (Top/Sweater) - 어깨부터 허리선까지
-                              _buildEquippedClothImageRelative(
-                                _equippedTop,
-                                top: 68,
-                                left: 45,
-                                width: 170,
-                                height: 130,
-                              ),
-
-                              // 4. 🧥 아우터 (Coat/Jacket) - 어깨부터 허벅지까지
-                              _buildEquippedClothImageRelative(
-                                _equippedOuter,
-                                top: 62,
-                                left: 35,
-                                width: 190,
-                                height: 150,
-                              ),
-
-                              // 5. 👟 신발 (Shoes) - 발목 아래 발 위치
-                              _buildEquippedClothImageRelative(
-                                _equippedShoes,
-                                top: 275,
-                                left: 60,
-                                width: 140,
-                                height: 60,
-                              ),
+                              _buildEquippedCloth(_equippedBottom),
+                              _buildEquippedCloth(_equippedTop),
+                              _buildEquippedCloth(_equippedOuter),
+                              _buildEquippedCloth(_equippedScarf),
+                              _buildEquippedCloth(_equippedAccessory),
+                              _buildEquippedCloth(_equippedShoes),
                             ],
                           ),
                         ),
@@ -519,7 +528,9 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
     return _equippedTop?.id == item.id ||
         _equippedBottom?.id == item.id ||
         _equippedOuter?.id == item.id ||
-        _equippedShoes?.id == item.id;
+        _equippedShoes?.id == item.id ||
+        _equippedScarf?.id == item.id ||
+        _equippedAccessory?.id == item.id;
   }
 
   String _getEquippedSummary() {
@@ -528,6 +539,8 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
     if (_equippedBottom != null) items.add(_equippedBottom!.title);
     if (_equippedOuter != null) items.add(_equippedOuter!.title);
     if (_equippedShoes != null) items.add(_equippedShoes!.title);
+    if (_equippedScarf != null) items.add(_equippedScarf!.title);
+    if (_equippedAccessory != null) items.add(_equippedAccessory!.title);
 
     if (items.isEmpty) return '없음';
     return items.join(', ');
