@@ -43,7 +43,6 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
   ClothItem? _equippedShoes;
   ClothItem? _equippedScarf;
   ClothItem? _equippedAccessory;
-  final Map<String, Offset> _customPositions = {};
 
   String _selectedCategory = '전체';
 
@@ -96,13 +95,8 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
     }
   }
 
-  void _equipItem(ClothItem item, {Offset? dropPosition}) {
+  void _equipItem(ClothItem item) {
     setState(() {
-      if (dropPosition == null) {
-        _customPositions.remove(item.id);
-      } else {
-        _customPositions[item.id] = dropPosition;
-      }
       if (item.category == '상의') {
         _equippedTop = item;
       } else if (item.category == '하의') {
@@ -157,7 +151,6 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
 
   void _resetOutfit() {
     setState(() {
-      _customPositions.clear();
       _equippedTop = null;
       _equippedBottom = null;
       _equippedOuter = null;
@@ -178,15 +171,12 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
     final child = _clothImage(item);
     if (child == null) return const SizedBox.shrink();
 
-    final dropPosition = _customPositions[item.id];
     final itemWidth = width * 300;
     final itemHeight = height * 440;
-    final itemLeft = dropPosition == null ? left * 300 : dropPosition.dx * 300 - itemWidth / 2;
-    final itemTop = dropPosition == null ? top * 440 : dropPosition.dy * 440 - itemHeight / 2;
 
     return Positioned(
-      top: itemTop.clamp(0.0, 440 - itemHeight).toDouble(),
-      left: itemLeft.clamp(0.0, 300 - itemWidth).toDouble(),
+      top: (top * 440).clamp(0.0, 440 - itemHeight).toDouble(),
+      left: (left * 300).clamp(0.0, 300 - itemWidth).toDouble(),
       width: itemWidth,
       height: itemHeight,
       child: child,
@@ -213,15 +203,10 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
     final shoe = _clothImage(item);
     if (shoe == null) return const SizedBox.shrink();
     final mirroredShoe = _clothImage(item)!;
-    final dropPosition = _customPositions[item.id];
-    const groupWidth = 0.42;
-    const groupHeight = 0.09;
-    final left = dropPosition == null
-        ? 0.29 * 300
-        : dropPosition.dx * 300 - groupWidth * 300 / 2;
-    final top = dropPosition == null
-        ? 0.90 * 440
-        : dropPosition.dy * 440 - groupHeight * 440 / 2;
+    const groupWidth = 0.34;
+    const groupHeight = 0.075;
+    const left = 0.33 * 300;
+    const top = 0.91 * 440;
 
     return Positioned(
       left: left.clamp(0.0, 300 - groupWidth * 300).toDouble(),
@@ -237,120 +222,46 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
     );
   }
 
-  Widget _buildBodyGuide() {
-    const skin = Color(0xFFE8C7B4);
-    return Stack(
-      children: [
-        Positioned(
-          top: 218,
-          left: 105,
-          child: Container(
-            width: 40,
-            height: 188,
-            decoration: const BoxDecoration(
-              color: skin,
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(18)),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 218,
-          left: 155,
-          child: Container(
-            width: 40,
-            height: 188,
-            decoration: const BoxDecoration(
-              color: skin,
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(18)),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 90,
-          left: 48,
-          child: Transform.rotate(
-            angle: -0.08,
-            child: Container(
-              width: 36,
-              height: 150,
-              decoration: BoxDecoration(color: skin, borderRadius: BorderRadius.circular(24)),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 90,
-          left: 216,
-          child: Transform.rotate(
-            angle: 0.08,
-            child: Container(
-              width: 36,
-              height: 150,
-              decoration: BoxDecoration(color: skin, borderRadius: BorderRadius.circular(24)),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 82,
-          left: 78,
-          child: Container(
-            width: 144,
-            height: 166,
-            decoration: BoxDecoration(color: skin, borderRadius: BorderRadius.circular(54)),
-          ),
-        ),
-        Positioned(
-          top: 57,
-          left: 132,
-          child: Container(
-            width: 36,
-            height: 42,
-            decoration: BoxDecoration(color: skin, borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        Positioned(
-          top: 4,
-          left: 119,
-          child: Container(
-            width: 62,
-            height: 68,
-            decoration: const BoxDecoration(color: skin, shape: BoxShape.circle),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildEquippedCloth(ClothItem? item) {
     if (item == null) return const SizedBox.shrink();
     final title = item.title.toLowerCase();
     if (RegExp(r'목도리|스카프|머플러').hasMatch(title)) {
-      return _buildEquippedClothImageRelative(item, top: 0.10, left: 0.33, width: 0.34, height: 0.14);
+      return _buildEquippedClothImageRelative(item, top: 0.16, left: 0.36, width: 0.28, height: 0.10);
     }
     if (RegExp(r'모자|캡|비니|hat|cap').hasMatch(title)) {
-      return _buildEquippedClothImageRelative(item, top: 0.00, left: 0.34, width: 0.32, height: 0.15);
+      return _buildEquippedClothImageRelative(item, top: 0.04, left: 0.37, width: 0.26, height: 0.12);
     }
     if (RegExp(r'가방|백팩|숄더백|bag|backpack').hasMatch(title)) {
-      return _buildEquippedClothImageRelative(item, top: 0.27, left: 0.00, width: 0.31, height: 0.33);
+      return _buildEquippedClothImageRelative(item, top: 0.30, left: 0.03, width: 0.23, height: 0.34);
+    }
+    if (RegExp(r'목걸이|넥타이|tie|necklace').hasMatch(title)) {
+      return _buildEquippedClothImageRelative(item, top: 0.17, left: 0.40, width: 0.20, height: 0.24);
+    }
+    if (RegExp(r'벨트|허리띠|belt').hasMatch(title)) {
+      return _buildEquippedClothImageRelative(item, top: 0.46, left: 0.24, width: 0.52, height: 0.08);
+    }
+    if (RegExp(r'양말|삭스|socks?').hasMatch(title)) {
+      return _buildEquippedClothImageRelative(item, top: 0.82, left: 0.30, width: 0.40, height: 0.12);
     }
     if (RegExp(r'원피스|드레스|점프수트|롬퍼|dress|jumpsuit|romper').hasMatch(title)) {
-      return _buildEquippedClothImageRelative(item, top: 0.18, left: 0.22, width: 0.56, height: 0.65);
+      return _buildEquippedClothImageRelative(item, top: 0.18, left: 0.24, width: 0.52, height: 0.66);
     }
     if (item.category == '상의') {
       final isCropped = RegExp(r'크롭|cropped').hasMatch(title);
       return _buildEquippedClothImageRelative(item,
-        top: 0.20, left: isCropped ? 0.25 : 0.20,
-        width: isCropped ? 0.50 : 0.60, height: isCropped ? 0.25 : 0.34);
+        top: isCropped ? 0.24 : 0.20, left: isCropped ? 0.27 : 0.21,
+        width: isCropped ? 0.46 : 0.58, height: isCropped ? 0.22 : 0.34);
     }
     if (item.category == '하의') {
       final isShort = RegExp(r'반바지|숏츠|shorts').hasMatch(title);
       return _buildEquippedClothImageRelative(item,
-        top: 0.48, left: 0.23, width: 0.54, height: isShort ? 0.24 : 0.42);
+        top: 0.49, left: 0.27, width: 0.46, height: isShort ? 0.22 : 0.43);
     }
     if (item.category == '아우터') {
       final isLong = RegExp(r'롱|코트|long|coat').hasMatch(title);
       return _buildEquippedClothImageRelative(item,
-        top: 0.18, left: isLong ? 0.14 : 0.17,
-        width: isLong ? 0.72 : 0.66, height: isLong ? 0.66 : 0.48);
+        top: 0.19, left: isLong ? 0.16 : 0.18,
+        width: isLong ? 0.68 : 0.64, height: isLong ? 0.64 : 0.48);
     }
     if (item == _equippedShoes) {
       return _buildShoes(item);
@@ -439,21 +350,7 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
             Expanded(
               child: DragTarget<ClothItem>(
                 onWillAcceptWithDetails: (details) => true,
-                  onAcceptWithDetails: (details) {
-                    final renderObject = context.findRenderObject();
-                    Offset? dropPosition;
-                    if (renderObject is RenderBox) {
-                      final local = renderObject.globalToLocal(details.offset);
-                      final canvasLeft = (renderObject.size.width - 300 * avatarScale) / 2;
-                      final canvasTop = (renderObject.size.height - 440 * avatarScale) / 2;
-                      final x = (local.dx - canvasLeft) / avatarScale;
-                      final y = (local.dy - canvasTop) / avatarScale;
-                      if (x >= 0 && x <= 300 && y >= 0 && y <= 440) {
-                        dropPosition = Offset(x / 300, y / 440);
-                      }
-                    }
-                    _equipItem(details.data, dropPosition: dropPosition);
-                  },
+                onAcceptWithDetails: (details) => _equipItem(details.data),
                 builder: (context, candidateData, rejectedData) {
                   final isHovering = candidateData.isNotEmpty;
 
@@ -501,10 +398,7 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
                                   ),
                                 )
                               else if (_customAvatarBytes != null)
-                                Image.memory(_customAvatarBytes!, width: 300, height: 440, fit: BoxFit.contain)
-                              else
-                                _buildBodyGuide(),
-
+                                Image.memory(_customAvatarBytes!, width: 300, height: 440, fit: BoxFit.contain),
                               _buildEquippedCloth(_equippedBottom),
                               _buildEquippedCloth(_equippedTop),
                               _buildEquippedCloth(_equippedOuter),
@@ -537,7 +431,7 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
                         Positioned(
                           bottom: 12,
                           child: Text(
-                            '하단 옷장의 옷을 드래그해서 아바타에 놓아보세요!',
+                            '옷을 드래그하면 종류에 맞는 위치에 배치됩니다',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 11,
@@ -557,7 +451,7 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: const Text(
-                                '✨ 손을 놓으면 아바타에 착용됩니다!',
+                                '✨ 놓으면 의상 종류에 맞춰 배치됩니다',
                                 style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                               ),
                             ),
