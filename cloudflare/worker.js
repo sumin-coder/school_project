@@ -8,8 +8,10 @@ const allowedOrigins = new Set([...allowedRedirectUris].map((uri) => new URL(uri
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
+    const isLocalOrigin = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+    const hasAllowedOrigin = !origin || allowedOrigins.has(origin) || isLocalOrigin;
     const corsHeaders = {
-      "Access-Control-Allow-Origin": allowedOrigins.has(origin)
+      "Access-Control-Allow-Origin": hasAllowedOrigin
         ? origin
         : "https://sumin-coder.github.io",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -25,6 +27,47 @@ export default {
     }
 
     const path = new URL(request.url).pathname;
+    if (path === "/groq/chat/completions") {
+      if (!hasAllowedOrigin) {
+        return json({error: "ORIGIN_NOT_ALLOWED"}, 403, corsHeaders);
+      }
+      if (!env.GROQ_API_KEY) {
+        return json({error: "GROQ_API_KEY_NOT_CONFIGURED"}, 503, corsHeaders);
+      }
+      if (Number(request.headers.get("Content-Length") || 0) > 100_000) {
+        return json({error: "REQUEST_TOO_LARGE"}, 413, corsHeaders);
+      }
+
+      try {
+        const body = await request.json();
+        if (!Array.isArray(body.messages)) {
+          return json({error: "INVALID_AI_REQUEST"}, 400, corsHeaders);
+        }
+        body.model = "openai/gpt-oss-20b";
+        body.max_completion_tokens = 1400;
+        delete body.temperature;
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${env.GROQ_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+        return new Response(response.body, {
+          status: response.status,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": response.headers.get("Content-Type") || "application/json",
+            "Cache-Control": "no-store",
+          },
+        });
+      } catch (error) {
+        console.error("Groq request failed:", error instanceof Error ? error.name : "UNKNOWN");
+        return json({error: "AI_SERVICE_UNAVAILABLE"}, 502, corsHeaders);
+      }
+    }
+
     const provider = path.endsWith("/naverOAuth") ? "naver" :
       path.endsWith("/kakaoOAuth") ? "kakao" : null;
     if (!provider) return json({error: "NOT_FOUND"}, 404, corsHeaders);

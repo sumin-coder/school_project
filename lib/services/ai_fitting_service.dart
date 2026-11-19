@@ -4,13 +4,8 @@ import 'package:http/http.dart' as http;
 import '../models/fitting_report_model.dart';
 
 class AiFittingService {
-  static String get apiKey {
-    try {
-      return utf8.decode(base64Decode('Z3NrX0tSRXRCQ0dWcTF6VEJmeU40UUlXR2Ryb0ZZN2ZhTnFsd0l0SlovNFB3QUM5aUdYbU0='));
-    } catch (_) {
-      return '';
-    }
-  }
+  static const String _aiProxyUrl =
+      'https://style-pulse-oauth.style-pulse.workers.dev/groq/chat/completions';
 
   Future<FittingReportModel> generateFittingReport({
     required double height,
@@ -54,13 +49,12 @@ You are an AI Virtual Fitting Assistant for an e-commerce fashion app. Your task
 
     try {
       final response = await http.post(
-        Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+        Uri.parse(_aiProxyUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'model': 'openai/gpt-oss-120b',
+          'model': 'openai/gpt-oss-20b',
           'messages': [
             {'role': 'system', 'content': 'You are a professional fashion fitting AI assistant outputting strict JSON only.'},
             {'role': 'user', 'content': prompt}

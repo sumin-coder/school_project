@@ -41,7 +41,7 @@
 * **Framework**: Flutter 3 (Dart)
 * **Backend**: Firebase Authentication, Cloud Firestore Cloud NoSQL
 * **Image Processing**: On-Device C++ Canvas Graphics Engine (`dart:ui`)
-* **AI Model**: Groq LLM (`openai/gpt-oss-120b`)
+* **AI Model**: Groq LLM (`openai/gpt-oss-20b` through Cloudflare Worker)
 * **Deployment**: GitHub Pages (`gh-pages`)
 
 ## Naver and Kakao web login profile setup
@@ -54,4 +54,4 @@ npx.cmd wrangler deploy --config cloudflare/wrangler.toml
 flutter build web --release --no-tree-shake-icons --base-href /school_project/ --dart-define=STYLE_PULSE_OAUTH_URL=https://style-pulse-oauth.<your-account>.workers.dev
 ```
 
-Publish the resulting `build/web` contents to `gh-pages`. Register `https://sumin-coder.github.io/school_project/` as the callback/redirect URL in the Naver and Kakao developer consoles. The Kakao JavaScript key's allowed SDK domain should include `https://sumin-coder.github.io`. The Worker uses the Kakao REST API key and Naver Client ID in `cloudflare/wrangler.toml`. Set provider secrets with `npx.cmd wrangler secret put NAVER_CLIENT_SECRET --config cloudflare/wrangler.toml` and `npx.cmd wrangler secret put KAKAO_CLIENT_SECRET --config cloudflare/wrangler.toml` when prompted.
+Publish the resulting `build/web` contents to `gh-pages`. Register `https://sumin-coder.github.io/school_project/` as the callback/redirect URL in the Naver and Kakao developer consoles. The Kakao JavaScript key's allowed SDK domain should include `https://sumin-coder.github.io`. The Worker uses the Kakao REST API key and Naver Client ID in `cloudflare/wrangler.toml`. Set provider and Groq secrets with `npx.cmd wrangler secret put NAVER_CLIENT_SECRET --config cloudflare/wrangler.toml`, `npx.cmd wrangler secret put KAKAO_CLIENT_SECRET --config cloudflare/wrangler.toml`, and `npx.cmd wrangler secret put GROQ_API_KEY --config cloudflare/wrangler.toml` when prompted.

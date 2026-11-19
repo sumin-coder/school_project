@@ -8,14 +8,8 @@ import '../services/weather_service.dart';
 
 class AiRecommendationService {
   static const String _favKey = 'style_pulse_fav_rec_titles';
-
-  static String get apiKey {
-    try {
-      return utf8.decode(base64Decode('Z3NrX0tSRXRCQ0dWcTF6VEJmeU40UUlXR2Ryb0ZZN2ZhTnFsd0l0SlovNFB3QUM5aUdYbU0='));
-    } catch (_) {
-      return '';
-    }
-  }
+  static const String _aiProxyUrl =
+      'https://style-pulse-oauth.style-pulse.workers.dev/groq/chat/completions';
 
   // ⚡ 속도 최적화: 메모리 캐시 (5분간 유지하여 즉각적인 응답 제공)
   static final Map<String, List<OutfitRecommendation>> _recommendationCache = {};
@@ -116,13 +110,12 @@ $clothesDescription
 
     try {
       final response = await http.post(
-        Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+        Uri.parse(_aiProxyUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'model': 'openai/gpt-oss-120b',
+          'model': 'openai/gpt-oss-20b',
           'messages': [
             {'role': 'system', 'content': 'You are a professional fashion stylist that outputs strict JSON array only.'},
             {'role': 'user', 'content': prompt}
