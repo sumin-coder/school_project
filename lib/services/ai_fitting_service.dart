@@ -60,7 +60,7 @@ You are an AI Virtual Fitting Assistant for an e-commerce fashion app. Your task
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'model': 'llama-3.3-70b-versatile',
+          'model': 'openai/gpt-oss-120b',
           'messages': [
             {'role': 'system', 'content': 'You are a professional fashion fitting AI assistant outputting strict JSON only.'},
             {'role': 'user', 'content': prompt}

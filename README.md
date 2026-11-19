@@ -41,7 +41,7 @@
 * **Framework**: Flutter 3 (Dart)
 * **Backend**: Firebase Authentication, Cloud Firestore Cloud NoSQL
 * **Image Processing**: On-Device C++ Canvas Graphics Engine (`dart:ui`)
-* **AI Model**: Groq LLM (`llama-3.3-70b-versatile`)
+* **AI Model**: Groq LLM (`openai/gpt-oss-120b`)
 * **Deployment**: GitHub Pages (`gh-pages`)
 
 ## Naver and Kakao web login profile setup
