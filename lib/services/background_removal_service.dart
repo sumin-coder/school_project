@@ -30,7 +30,7 @@ class BackgroundRemovalService {
       final Uint8List pixels = byteData.buffer.asUint8List();
 
       // 1. 외곽 모서리 샘플링으로 주요 배경 색상(RGB) 추출
-      final List<int> bgRgb = _getAverageCornerColor(pixels, width, height);
+      final List<int> bgRgb = _getMedianBorderColor(pixels, width, height);
       final int bgR = bgRgb[0];
       final int bgG = bgRgb[1];
       final int bgB = bgRgb[2];
@@ -92,10 +92,46 @@ class BackgroundRemovalService {
         completer.complete,
       );
       final ui.Image newImage = await completer.future;
-      final ByteData? pngBytes = await newImage.toByteData(
+      int minX = width;
+      int minY = height;
+      int maxX = -1;
+      int maxY = -1;
+      for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+          if (pixels[(y * width + x) * 4 + 3] > 8) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+
+      if (maxX < minX || maxY < minY) return null;
+      const padding = 4;
+      minX = (minX - padding).clamp(0, width - 1).toInt();
+      minY = (minY - padding).clamp(0, height - 1).toInt();
+      maxX = (maxX + padding).clamp(0, width - 1).toInt();
+      maxY = (maxY + padding).clamp(0, height - 1).toInt();
+      final cropWidth = maxX - minX + 1;
+      final cropHeight = maxY - minY + 1;
+      final recorder = ui.PictureRecorder();
+      final canvas = ui.Canvas(recorder);
+      canvas.drawImageRect(
+        newImage,
+        ui.Rect.fromLTWH(
+          minX.toDouble(),
+          minY.toDouble(),
+          cropWidth.toDouble(),
+          cropHeight.toDouble(),
+        ),
+        ui.Rect.fromLTWH(0, 0, cropWidth.toDouble(), cropHeight.toDouble()),
+        ui.Paint()..filterQuality = ui.FilterQuality.high,
+      );
+      final cropped = await recorder.endRecording().toImage(cropWidth, cropHeight);
+      final ByteData? pngBytes = await cropped.toByteData(
         format: ui.ImageByteFormat.png,
       );
-
       return pngBytes?.buffer.asUint8List();
     } catch (e) {
       debugPrint('로컬 배경 제거 처리 오류: $e');
@@ -161,29 +197,33 @@ class BackgroundRemovalService {
     }
   }
 
-  List<int> _getAverageCornerColor(Uint8List pixels, int width, int height) {
-    int rSum = 0, gSum = 0, bSum = 0, count = 0;
-    final samplePoints = [
-      0, // 좌상단
-      width - 1, // 우상단
-      (height - 1) * width, // 좌하단
-      (height - 1) * width + (width - 1), // 우하단
-      width ~/ 2, // 상단 중앙
-      (height - 1) * width + (width ~/ 2), // 하단 중앙
-    ];
+  List<int> _getMedianBorderColor(Uint8List pixels, int width, int height) {
+    final red = <int>[];
+    final green = <int>[];
+    final blue = <int>[];
 
-    for (final idx in samplePoints) {
-      final offset = idx * 4;
-      if (offset + 2 < pixels.length) {
-        rSum += pixels[offset];
-        gSum += pixels[offset + 1];
-        bSum += pixels[offset + 2];
-        count++;
-      }
+    void sample(int x, int y) {
+      final offset = (y * width + x) * 4;
+      red.add(pixels[offset]);
+      green.add(pixels[offset + 1]);
+      blue.add(pixels[offset + 2]);
     }
 
-    if (count == 0) return [255, 255, 255];
-    return [rSum ~/ count, gSum ~/ count, bSum ~/ count];
+    for (int step = 0; step <= 10; step++) {
+      final x = (width - 1) * step ~/ 10;
+      final y = (height - 1) * step ~/ 10;
+      sample(x, 0);
+      sample(x, height - 1);
+      sample(0, y);
+      sample(width - 1, y);
+    }
+
+    int median(List<int> values) {
+      values.sort();
+      return values[values.length ~/ 2];
+    }
+
+    return [median(red), median(green), median(blue)];
   }
 
   /// ✂️ **[스마트 카테고리 크롭 + 100% 무료 배경 제거]**
