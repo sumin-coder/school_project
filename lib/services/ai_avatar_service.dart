@@ -23,12 +23,6 @@ class AiAvatarService {
       final recorder = ui.PictureRecorder();
       final canvas = ui.Canvas(recorder);
 
-      // 은은한 스테이지 서클 그리기
-      final paint = ui.Paint()
-        ..color = const ui.Color(0xFFFF6F61).withValues(alpha: 0.15)
-        ..style = ui.PaintingStyle.fill;
-      canvas.drawCircle(const ui.Offset(150, 430), 100, paint);
-
       final bodyPaint = ui.Paint()..filterQuality = ui.FilterQuality.high;
       canvas.drawImageRect(
         bodyImage,

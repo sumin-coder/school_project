@@ -175,20 +175,7 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
   }) {
     if (item == null) return const SizedBox.shrink();
 
-    Widget? child;
-    if (item.imageBytes != null) {
-      child = Image.memory(item.imageBytes!, fit: BoxFit.contain);
-    } else if (item.imageUrl != null && item.imageUrl!.isNotEmpty) {
-      if (item.imageUrl!.startsWith('http')) {
-        child = Image.network(item.imageUrl!, fit: BoxFit.contain);
-      } else {
-        try {
-          final decoded = base64Decode(item.imageUrl!);
-          child = Image.memory(decoded, fit: BoxFit.contain);
-        } catch (_) {}
-      }
-    }
-
+    final child = _clothImage(item);
     if (child == null) return const SizedBox.shrink();
 
     final dropPosition = _customPositions[item.id];
@@ -203,6 +190,133 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
       width: itemWidth,
       height: itemHeight,
       child: child,
+    );
+  }
+
+  Widget? _clothImage(ClothItem item) {
+    if (item.imageBytes != null) {
+      return Image.memory(item.imageBytes!, fit: BoxFit.contain);
+    }
+    final imageUrl = item.imageUrl;
+    if (imageUrl == null || imageUrl.isEmpty) return null;
+    if (imageUrl.startsWith('http')) {
+      return Image.network(imageUrl, fit: BoxFit.contain);
+    }
+    try {
+      return Image.memory(base64Decode(imageUrl), fit: BoxFit.contain);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Widget _buildShoes(ClothItem item) {
+    final shoe = _clothImage(item);
+    if (shoe == null) return const SizedBox.shrink();
+    final mirroredShoe = _clothImage(item)!;
+    final dropPosition = _customPositions[item.id];
+    const groupWidth = 0.42;
+    const groupHeight = 0.09;
+    final left = dropPosition == null
+        ? 0.29 * 300
+        : dropPosition.dx * 300 - groupWidth * 300 / 2;
+    final top = dropPosition == null
+        ? 0.90 * 440
+        : dropPosition.dy * 440 - groupHeight * 440 / 2;
+
+    return Positioned(
+      left: left.clamp(0.0, 300 - groupWidth * 300).toDouble(),
+      top: top.clamp(0.0, 440 - groupHeight * 440).toDouble(),
+      width: groupWidth * 300,
+      height: groupHeight * 440,
+      child: Row(
+        children: [
+          Expanded(child: shoe),
+          Expanded(child: Transform.scale(scaleX: -1, child: mirroredShoe)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBodyGuide() {
+    const skin = Color(0xFFE8C7B4);
+    return Stack(
+      children: [
+        Positioned(
+          top: 218,
+          left: 105,
+          child: Container(
+            width: 40,
+            height: 188,
+            decoration: const BoxDecoration(
+              color: skin,
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(18)),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 218,
+          left: 155,
+          child: Container(
+            width: 40,
+            height: 188,
+            decoration: const BoxDecoration(
+              color: skin,
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(18)),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 90,
+          left: 48,
+          child: Transform.rotate(
+            angle: -0.08,
+            child: Container(
+              width: 36,
+              height: 150,
+              decoration: BoxDecoration(color: skin, borderRadius: BorderRadius.circular(24)),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 90,
+          left: 216,
+          child: Transform.rotate(
+            angle: 0.08,
+            child: Container(
+              width: 36,
+              height: 150,
+              decoration: BoxDecoration(color: skin, borderRadius: BorderRadius.circular(24)),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 82,
+          left: 78,
+          child: Container(
+            width: 144,
+            height: 166,
+            decoration: BoxDecoration(color: skin, borderRadius: BorderRadius.circular(54)),
+          ),
+        ),
+        Positioned(
+          top: 57,
+          left: 132,
+          child: Container(
+            width: 36,
+            height: 42,
+            decoration: BoxDecoration(color: skin, borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        Positioned(
+          top: 4,
+          left: 119,
+          child: Container(
+            width: 62,
+            height: 68,
+            decoration: const BoxDecoration(color: skin, shape: BoxShape.circle),
+          ),
+        ),
+      ],
     );
   }
 
@@ -224,22 +338,22 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
     if (item.category == '상의') {
       final isCropped = RegExp(r'크롭|cropped').hasMatch(title);
       return _buildEquippedClothImageRelative(item,
-        top: 0.19, left: isCropped ? 0.24 : 0.17,
-        width: isCropped ? 0.52 : 0.66, height: isCropped ? 0.27 : 0.36);
+        top: 0.20, left: isCropped ? 0.25 : 0.20,
+        width: isCropped ? 0.50 : 0.60, height: isCropped ? 0.25 : 0.34);
     }
     if (item.category == '하의') {
       final isShort = RegExp(r'반바지|숏츠|shorts').hasMatch(title);
       return _buildEquippedClothImageRelative(item,
-        top: 0.45, left: 0.28, width: 0.44, height: isShort ? 0.25 : 0.42);
+        top: 0.48, left: 0.23, width: 0.54, height: isShort ? 0.24 : 0.42);
     }
     if (item.category == '아우터') {
       final isLong = RegExp(r'롱|코트|long|coat').hasMatch(title);
       return _buildEquippedClothImageRelative(item,
-        top: 0.17, left: isLong ? 0.11 : 0.14,
-        width: isLong ? 0.78 : 0.72, height: isLong ? 0.68 : 0.52);
+        top: 0.18, left: isLong ? 0.14 : 0.17,
+        width: isLong ? 0.72 : 0.66, height: isLong ? 0.66 : 0.48);
     }
     if (item == _equippedShoes) {
-      return _buildEquippedClothImageRelative(item, top: 0.83, left: 0.23, width: 0.54, height: 0.14);
+      return _buildShoes(item);
     }
     return _buildEquippedClothImageRelative(item, top: 0.38, left: 0.64, width: 0.34, height: 0.28);
   }
@@ -365,27 +479,7 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // 배경 네온 그리드 스팟
-                        Positioned(
-                          bottom: 20,
-                          child: Container(
-                            width: 220,
-                            height: 35,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.2),
-                              borderRadius: const BorderRadius.all(Radius.elliptical(220, 35)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primary.withValues(alpha: 0.3),
-                                  blurRadius: 20,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        // 🧍 정밀 비율 스케일드 3D 아바타 피규어 & 레이어 박스 (260 x 380)
+                        // 🧍 체형 가이드와 의상 레이어
                         Transform.scale(
                           scale: avatarScale,
                           child: SizedBox(
@@ -407,7 +501,9 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
                                   ),
                                 )
                               else if (_customAvatarBytes != null)
-                                Image.memory(_customAvatarBytes!, width: 300, height: 440, fit: BoxFit.contain),
+                                Image.memory(_customAvatarBytes!, width: 300, height: 440, fit: BoxFit.contain)
+                              else
+                                _buildBodyGuide(),
 
                               _buildEquippedCloth(_equippedBottom),
                               _buildEquippedCloth(_equippedTop),
