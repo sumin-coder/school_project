@@ -43,6 +43,7 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
   ClothItem? _equippedShoes;
   ClothItem? _equippedScarf;
   ClothItem? _equippedAccessory;
+  final Map<String, Offset> _customPositions = {};
 
   String _selectedCategory = '전체';
 
@@ -95,8 +96,13 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
     }
   }
 
-  void _equipItem(ClothItem item) {
+  void _equipItem(ClothItem item, {Offset? dropPosition}) {
     setState(() {
+      if (dropPosition == null) {
+        _customPositions.remove(item.id);
+      } else {
+        _customPositions[item.id] = dropPosition;
+      }
       if (item.category == '상의') {
         _equippedTop = item;
       } else if (item.category == '하의') {
@@ -151,6 +157,7 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
 
   void _resetOutfit() {
     setState(() {
+      _customPositions.clear();
       _equippedTop = null;
       _equippedBottom = null;
       _equippedOuter = null;
@@ -184,11 +191,17 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
 
     if (child == null) return const SizedBox.shrink();
 
+    final dropPosition = _customPositions[item.id];
+    final itemWidth = width * 300;
+    final itemHeight = height * 440;
+    final itemLeft = dropPosition == null ? left * 300 : dropPosition.dx * 300 - itemWidth / 2;
+    final itemTop = dropPosition == null ? top * 440 : dropPosition.dy * 440 - itemHeight / 2;
+
     return Positioned(
-      top: top,
-      left: left,
-      width: width,
-      height: height,
+      top: itemTop.clamp(0.0, 440 - itemHeight).toDouble(),
+      left: itemLeft.clamp(0.0, 300 - itemWidth).toDouble(),
+      width: itemWidth,
+      height: itemHeight,
       child: child,
     );
   }
@@ -197,41 +210,44 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
     if (item == null) return const SizedBox.shrink();
     final title = item.title.toLowerCase();
     if (RegExp(r'목도리|스카프|머플러').hasMatch(title)) {
-      return _buildEquippedClothImageRelative(item, top: 36, left: 83, width: 94, height: 74);
+      return _buildEquippedClothImageRelative(item, top: 0.10, left: 0.33, width: 0.34, height: 0.14);
     }
     if (RegExp(r'모자|캡|비니|hat|cap').hasMatch(title)) {
-      return _buildEquippedClothImageRelative(item, top: 0, left: 83, width: 94, height: 74);
+      return _buildEquippedClothImageRelative(item, top: 0.00, left: 0.34, width: 0.32, height: 0.15);
     }
     if (RegExp(r'가방|백팩|숄더백|bag|backpack').hasMatch(title)) {
-      return _buildEquippedClothImageRelative(item, top: 102, left: 0, width: 92, height: 130);
+      return _buildEquippedClothImageRelative(item, top: 0.27, left: 0.00, width: 0.31, height: 0.33);
+    }
+    if (RegExp(r'원피스|드레스|점프수트|롬퍼|dress|jumpsuit|romper').hasMatch(title)) {
+      return _buildEquippedClothImageRelative(item, top: 0.18, left: 0.22, width: 0.56, height: 0.65);
     }
     if (item.category == '상의') {
       final isCropped = RegExp(r'크롭|cropped').hasMatch(title);
       return _buildEquippedClothImageRelative(item,
-        top: 68, left: isCropped ? 57 : 45,
-        width: isCropped ? 146 : 170, height: isCropped ? 105 : 142);
+        top: 0.19, left: isCropped ? 0.24 : 0.17,
+        width: isCropped ? 0.52 : 0.66, height: isCropped ? 0.27 : 0.36);
     }
     if (item.category == '하의') {
       final isShort = RegExp(r'반바지|숏츠|shorts').hasMatch(title);
       return _buildEquippedClothImageRelative(item,
-        top: 145, left: 55, width: 150, height: isShort ? 105 : 150);
+        top: 0.45, left: 0.28, width: 0.44, height: isShort ? 0.25 : 0.42);
     }
     if (item.category == '아우터') {
       final isLong = RegExp(r'롱|코트|long|coat').hasMatch(title);
       return _buildEquippedClothImageRelative(item,
-        top: 62, left: isLong ? 28 : 35,
-        width: isLong ? 204 : 190, height: isLong ? 220 : 170);
+        top: 0.17, left: isLong ? 0.11 : 0.14,
+        width: isLong ? 0.78 : 0.72, height: isLong ? 0.68 : 0.52);
     }
     if (item == _equippedShoes) {
-      return _buildEquippedClothImageRelative(item, top: 304, left: 72, width: 116, height: 46);
+      return _buildEquippedClothImageRelative(item, top: 0.83, left: 0.23, width: 0.54, height: 0.14);
     }
-    return _buildEquippedClothImageRelative(item, top: 130, left: 170, width: 82, height: 110);
+    return _buildEquippedClothImageRelative(item, top: 0.38, left: 0.64, width: 0.34, height: 0.28);
   }
 
   Widget _buildPaletteItemCard(ClothItem item, bool isEquipped, bool isDarkMode) {
     return Container(
-      width: 90,
-      padding: const EdgeInsets.all(6),
+      width: 116,
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: isEquipped
             ? AppColors.primary.withValues(alpha: 0.15)
@@ -245,7 +261,15 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          ClothThumbnail(item: item, size: 48),
+          Container(
+            width: 84,
+            height: 84,
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.black12 : Colors.white,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ClothThumbnail(item: item, size: 78),
+          ),
           const SizedBox(height: 4),
           Text(
             item.title,
@@ -268,10 +292,10 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
     final screenSize = MediaQuery.sizeOf(context);
     final avatarScale = math
         .min(
-          1.8,
-          math.min((screenSize.width - 48) / 260, (screenSize.height - 260) / 380),
+          1.35,
+          math.min((screenSize.width - 48) / 300, (screenSize.height - 260) / 440),
         )
-        .clamp(1.0, 1.8)
+        .clamp(0.85, 1.35)
         .toDouble();
 
     final filteredClothes = _selectedCategory == '전체'
@@ -301,7 +325,21 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
             Expanded(
               child: DragTarget<ClothItem>(
                 onWillAcceptWithDetails: (details) => true,
-                onAcceptWithDetails: (details) => _equipItem(details.data),
+                  onAcceptWithDetails: (details) {
+                    final renderObject = context.findRenderObject();
+                    Offset? dropPosition;
+                    if (renderObject is RenderBox) {
+                      final local = renderObject.globalToLocal(details.offset);
+                      final canvasLeft = (renderObject.size.width - 300 * avatarScale) / 2;
+                      final canvasTop = (renderObject.size.height - 440 * avatarScale) / 2;
+                      final x = (local.dx - canvasLeft) / avatarScale;
+                      final y = (local.dy - canvasTop) / avatarScale;
+                      if (x >= 0 && x <= 300 && y >= 0 && y <= 440) {
+                        dropPosition = Offset(x / 300, y / 440);
+                      }
+                    }
+                    _equipItem(details.data, dropPosition: dropPosition);
+                  },
                 builder: (context, candidateData, rejectedData) {
                   final isHovering = candidateData.isNotEmpty;
 
@@ -351,8 +389,8 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
                         Transform.scale(
                           scale: avatarScale,
                           child: SizedBox(
-                            width: 260,
-                            height: 380,
+                            width: 300,
+                            height: 440,
                             child: Stack(
                               alignment: Alignment.topCenter,
                               children: [
@@ -369,7 +407,7 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
                                   ),
                                 )
                               else if (_customAvatarBytes != null)
-                                Image.memory(_customAvatarBytes!, width: 260, height: 380, fit: BoxFit.contain),
+                                Image.memory(_customAvatarBytes!, width: 300, height: 440, fit: BoxFit.contain),
 
                               _buildEquippedCloth(_equippedBottom),
                               _buildEquippedCloth(_equippedTop),
@@ -503,15 +541,15 @@ class _AvatarFittingScreenState extends State<AvatarFittingScreen> {
                                   child: Opacity(
                                     opacity: 0.85,
                                     child: Container(
-                                      width: 85,
-                                      height: 85,
+                                      width: 110,
+                                      height: 110,
                                       padding: const EdgeInsets.all(6),
                                       decoration: BoxDecoration(
                                         color: AppColors.primary.withValues(alpha: 0.2),
                                         borderRadius: BorderRadius.circular(16),
                                         border: Border.all(color: AppColors.primary, width: 2),
                                       ),
-                                      child: ClothThumbnail(item: item, size: 60),
+                                      child: ClothThumbnail(item: item, size: 88),
                                     ),
                                   ),
                                 ),

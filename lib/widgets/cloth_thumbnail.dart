@@ -54,7 +54,7 @@ class ClothThumbnail extends StatelessWidget {
             imageUrl,
             width: size,
             height: size,
-            fit: BoxFit.cover,
+            fit: BoxFit.contain,
             errorBuilder: (context, error, stackTrace) => Icon(
               Icons.checkroom,
               size: size * 0.8,
@@ -71,7 +71,7 @@ class ClothThumbnail extends StatelessWidget {
               bytes,
               width: size,
               height: size,
-              fit: BoxFit.cover,
+              fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) => Icon(
                 Icons.checkroom,
                 size: size * 0.8,
@@ -88,7 +88,7 @@ class ClothThumbnail extends StatelessWidget {
           item.imageBytes!,
           width: size,
           height: size,
-          fit: BoxFit.cover,
+          fit: BoxFit.contain,
         ),
       );
     }
