@@ -1,9 +1,44 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
 /// 100% 전면 무료 온디바이스 누끼 따기 서비스 (유료 API 결제 / 크레딧 차감 0원)
 class BackgroundRemovalService {
+  static const String _aiRemovalUrl =
+      'https://style-pulse-oauth.style-pulse.workers.dev/images/remove-background';
+
+  /// Segments the foreground with Cloudflare Images' AI model and returns a transparent PNG.
+  Future<Uint8List?> removeClothingBackground(Uint8List imageBytes) async {
+    try {
+      final contentType = imageBytes.length >= 8 &&
+              imageBytes[0] == 0x89 &&
+              imageBytes[1] == 0x50 &&
+              imageBytes[2] == 0x4e &&
+              imageBytes[3] == 0x47
+          ? 'image/png'
+          : imageBytes.length >= 3 &&
+                  imageBytes[0] == 0xff &&
+                  imageBytes[1] == 0xd8 &&
+                  imageBytes[2] == 0xff
+              ? 'image/jpeg'
+              : 'image/webp';
+      final response = await http.post(
+        Uri.parse(_aiRemovalUrl),
+        headers: {'Content-Type': contentType},
+        body: imageBytes,
+      ).timeout(const Duration(seconds: 45));
+      if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
+        debugPrint('AI background removal failed: ${response.statusCode} ${response.body}');
+        return null;
+      }
+      return response.bodyBytes;
+    } catch (error) {
+      debugPrint('AI background removal request failed: $error');
+      return null;
+    }
+  }
+
   static String apiKey = '';
   /// ⚡ **[100% 무료 / 초고속 온디바이스 배경 제거]**
   /// 유료 API나 크레딧 차감 없이 스마트폰 내부 C++ 그래픽 엔진(dart:ui)을 활용하여

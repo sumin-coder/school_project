@@ -27,6 +27,33 @@ export default {
     }
 
     const path = new URL(request.url).pathname;
+    if (path === "/images/remove-background") {
+      if (!hasAllowedOrigin) {
+        return json({error: "ORIGIN_NOT_ALLOWED"}, 403, corsHeaders);
+      }
+      if (!env.IMAGES) {
+        return json({error: "IMAGE_SERVICE_NOT_CONFIGURED"}, 503, corsHeaders);
+      }
+      if (Number(request.headers.get("Content-Length") || 0) > 20_000_000) {
+        return json({error: "IMAGE_TOO_LARGE"}, 413, corsHeaders);
+      }
+      if (!request.body || !request.headers.get("Content-Type")?.startsWith("image/")) {
+        return json({error: "INVALID_IMAGE"}, 400, corsHeaders);
+      }
+
+      try {
+        const result = await env.IMAGES.input(request.body)
+          .transform({segment: "foreground"})
+          .output({format: "image/png"});
+        return result.response({
+          headers: {...corsHeaders, "Cache-Control": "no-store"},
+        });
+      } catch (error) {
+        console.error("Image segmentation failed:", error instanceof Error ? error.name : "UNKNOWN");
+        return json({error: "IMAGE_SEGMENTATION_FAILED"}, 502, corsHeaders);
+      }
+    }
+
     if (path === "/groq/chat/completions") {
       if (!hasAllowedOrigin) {
         return json({error: "ORIGIN_NOT_ALLOWED"}, 403, corsHeaders);

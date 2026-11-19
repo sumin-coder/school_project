@@ -82,10 +82,8 @@ class _AddClothDialogState extends State<AddClothDialog> {
       _selectedRegion = region;
     });
 
-    final Uint8List? result = await _bgRemovalService.cropAndRemoveBackground(
+    final Uint8List? result = await _bgRemovalService.removeClothingBackground(
       widget.originalBytes,
-      category: _category,
-      cropRegion: region,
     );
 
     if (result != null) {
@@ -99,6 +97,11 @@ class _AddClothDialogState extends State<AddClothDialog> {
         _activeImageBytes = result;
       }
     });
+    if (result == null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('AI 옷 누끼에 실패했습니다. 잠시 후 다시 시도해 주세요.')),
+      );
+    }
   }
 
   @override
