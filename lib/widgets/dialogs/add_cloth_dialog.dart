@@ -44,7 +44,7 @@ class _AddClothDialogState extends State<AddClothDialog> {
   String _name = '';
   String _category = '상의';
   String _color = '';
-  String _selectedRegion = 'top'; // 'top', 'bottom', 'full', 'original'
+  String _selectedRegion = 'full';
   bool _isProcessing = false;
 
   final Map<String, Uint8List> _regionCache = {};
@@ -54,13 +54,12 @@ class _AddClothDialogState extends State<AddClothDialog> {
   void initState() {
     super.initState();
     if (widget.processedBytes != null) {
-      _regionCache['top'] = widget.processedBytes!;
       _regionCache['full'] = widget.processedBytes!;
     }
     _activeImageBytes = widget.processedBytes ?? widget.originalBytes;
   }
 
-  Future<void> _updateRegion(String region, String cat) async {
+  Future<void> _updateRegion(String region) async {
     if (region == 'original') {
       setState(() {
         _selectedRegion = 'original';
@@ -69,7 +68,7 @@ class _AddClothDialogState extends State<AddClothDialog> {
       return;
     }
 
-    final cacheKey = '${cat}_$region';
+    final cacheKey = region;
     if (_regionCache.containsKey(cacheKey)) {
       setState(() {
         _selectedRegion = region;
@@ -85,7 +84,7 @@ class _AddClothDialogState extends State<AddClothDialog> {
 
     final Uint8List? result = await _bgRemovalService.cropAndRemoveBackground(
       widget.originalBytes,
-      category: cat,
+      category: _category,
       cropRegion: region,
     );
 
@@ -149,7 +148,7 @@ class _AddClothDialogState extends State<AddClothDialog> {
             Column(
               children: [
                 const Text(
-                  '✂️ 영역 선택 (전신/착샷/마네킹용)',
+                  '✂️ 옷만 남기기',
                   style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 6),
@@ -159,29 +158,11 @@ class _AddClothDialogState extends State<AddClothDialog> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       ChoiceChip(
-                        label: const Text('상의만'),
-                        selected: _selectedRegion == 'top',
-                        selectedColor: AppColors.primary.withValues(alpha: 0.2),
-                        onSelected: (selected) {
-                          if (selected) _updateRegion('top', _category);
-                        },
-                      ),
-                      const SizedBox(width: 4),
-                      ChoiceChip(
-                        label: const Text('하의만'),
-                        selected: _selectedRegion == 'bottom',
-                        selectedColor: AppColors.primary.withValues(alpha: 0.2),
-                        onSelected: (selected) {
-                          if (selected) _updateRegion('bottom', _category);
-                        },
-                      ),
-                      const SizedBox(width: 4),
-                      ChoiceChip(
-                        label: const Text('전체 누끼'),
+                        label: const Text('옷만 누끼'),
                         selected: _selectedRegion == 'full',
                         selectedColor: AppColors.primary.withValues(alpha: 0.2),
                         onSelected: (selected) {
-                          if (selected) _updateRegion('full', _category);
+                          if (selected) _updateRegion('full');
                         },
                       ),
                       const SizedBox(width: 4),
@@ -190,7 +171,7 @@ class _AddClothDialogState extends State<AddClothDialog> {
                         selected: _selectedRegion == 'original',
                         selectedColor: Colors.grey.withValues(alpha: 0.2),
                         onSelected: (selected) {
-                          if (selected) _updateRegion('original', _category);
+                          if (selected) _updateRegion('original');
                         },
                       ),
                     ],
@@ -218,11 +199,6 @@ class _AddClothDialogState extends State<AddClothDialog> {
               onChanged: (val) {
                 if (val != null) {
                   setState(() => _category = val);
-                  if (val == '하의' && _selectedRegion != 'bottom') {
-                    _updateRegion('bottom', val);
-                  } else if ((val == '상의' || val == '아우터') && _selectedRegion != 'top') {
-                    _updateRegion('top', val);
-                  }
                 }
               },
             ),
